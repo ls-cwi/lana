@@ -24,12 +24,19 @@
 namespace nina {
 namespace gna {
 
-template<typename GR>
+template<typename GR, typename BGR>
 class Product
 {
 public:
   /// The graph type of the input graph
   typedef GR Graph;
+  /// The graph type of the bipartite matching graph
+  typedef BGR BpGraph;
+  /// Type of the matching graph
+  typedef MatchingGraph<Graph, BpGraph> MatchingGraphType;
+
+  typedef typename BpGraph::Node BpNode;
+  typedef typename BpGraph::Edge BpEdge;
   typedef Molecule<Graph> MoleculeType;
   typedef std::vector<typename Graph::Node> NodeVector;
   typedef typename NodeVector::const_iterator NodeVectorIt;
@@ -47,9 +54,10 @@ private:
   typedef typename Graph::template NodeMap<NodeVector> NodeVectorMap;
 
 public:
-  Product(const MoleculeType& mol1, const MoleculeType& mol2, int shell)
+  Product(const MoleculeType& mol1, const MoleculeType& mol2, const MatchingGraphType& matchingGraph, int shell)
     : _mol1(mol1)
     , _mol2(mol2)
+    , _matchingGraph(matchingGraph)
     , _shell(shell)
     , _g()
     , _mol1ToG(mol1.getGraph(), lemon::INVALID)
@@ -121,6 +129,7 @@ public:
 private:
   const MoleculeType& _mol1;
   const MoleculeType& _mol2;
+  const MatchingGraphType& _matchingGraph;
   const int _shell;
   Graph _g;
   NodeNodeMap _mol1ToG;
@@ -260,8 +269,8 @@ public:
   }
 };
 
-template<typename GR>
-inline void Product<GR>::dfs(const IntNodeMap& deg,
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::dfs(const IntNodeMap& deg,
                              const Node v, const int depth,
                              const MoleculeType& mol,
                              BoolNodeMap& visited,
@@ -285,8 +294,8 @@ inline void Product<GR>::dfs(const IntNodeMap& deg,
   }
 }
 
-template<typename GR>
-inline void Product<GR>::determineDegrees(const Graph& g, IntNodeMap& deg)
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::determineDegrees(const Graph& g, IntNodeMap& deg)
 {
   for (NodeIt v(g); v != lemon::INVALID; ++v)
   {
@@ -297,8 +306,8 @@ inline void Product<GR>::determineDegrees(const Graph& g, IntNodeMap& deg)
   }
 }
 
-template<typename GR>
-inline void Product<GR>::generateDeg1NeighborSet(const Graph& g,
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::generateDeg1NeighborSet(const Graph& g,
                                                  const IntNodeMap& deg,
                                                  NodeVectorMap& deg1NeighborMap)
 {
@@ -317,14 +326,15 @@ inline void Product<GR>::generateDeg1NeighborSet(const Graph& g,
   }
 }
 
-template<typename GR>
-inline void Product<GR>::generate()
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::generate()
 {
   const Graph& g1 = _mol1.getGraph();
   const Graph& g2 = _mol2.getGraph();
 
   lemon::ArcLookUp<Graph> arcLookUp1(g1);
   lemon::ArcLookUp<Graph> arcLookUp2(g2);
+  lemon::ArcLookUp<BpGraph> arcLookUpGm(_matchingGraph.getGm());
 
   IntSetNodeMap set1(g1);
   IntSetNodeMap degSet1(g1);
@@ -345,7 +355,10 @@ inline void Product<GR>::generate()
   {
     for (NodeIt v(g2); v != lemon::INVALID; ++v)
     {
-      if ( set1[u] == set2[v]) //&& degSet1[u] == degSet2[v])
+      BpNode bp_u = _matchingGraph.mapG1ToGm(u);
+      BpNode bp_v = _matchingGraph.mapG2ToGm(v);
+      BpEdge uv = arcLookUpGm(bp_u, bp_v);
+      if ( set1[u] == set2[v] && uv != lemon::INVALID) //&& degSet1[u] == degSet2[v])
       {
 //        assert(deg1[u] == deg2[v]);
         // don't add product nodes for a pair of deg-1 nodes unless _shell == 0
@@ -396,8 +409,8 @@ inline void Product<GR>::generate()
   }
 }
 
-template<typename GR>
-inline void Product<GR>::generate(const MoleculeType& mol,
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::generate(const MoleculeType& mol,
                                            const IntNodeMap& deg,
                                            IntSetNodeMap& intSet,
                                            IntSetNodeMap& degSet)
@@ -414,8 +427,8 @@ inline void Product<GR>::generate(const MoleculeType& mol,
 }
 
 
-template<typename GR>
-inline void Product<GR>::printDOT(std::ostream& out) const
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::printDOT(std::ostream& out) const
 {
   // header
   out << "graph G {" << std::endl

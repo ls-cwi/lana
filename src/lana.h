@@ -48,7 +48,7 @@ public:
     /// Type of a matching map: maps a node to its matching edge
     typedef typename BpGraph::template NodeMap<BpEdge> BpMatchingMap;
 
-    typedef Product<Graph> ProductType;
+    typedef Product<Graph, BpGraph> ProductType;
 
     /// Type of input graph parser
     typedef Parser<Graph> ParserType;
@@ -143,7 +143,7 @@ int Lana<GR, BGR>::solve() {
     Molecule<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
 
     // TODO: Use proper shell or remove it.
-    ProductType prod(m1, m2, 0);
+    ProductType prod(m1, m2, *_pMatchingGraph, 0);
     if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
     {
         std::cerr << "Product graph has " << prod.getNumNodes()
@@ -151,7 +151,7 @@ int Lana<GR, BGR>::solve() {
         << " edges" << std::endl;
     }
 
-    BronKerboschConnected<Graph> bk(prod);
+    BronKerboschConnected<Graph, BpGraph> bk(prod);
     lemon::Timer t;
     bk.run(BronKerbosch<Graph>::BK_CLASSIC);
     if (g_verbosity >= VERBOSE_NON_ESSENTIAL)

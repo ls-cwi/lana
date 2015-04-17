@@ -16,16 +16,18 @@
 namespace nina {
 namespace gna {
 
-template<typename GR>
+template<typename GR, typename BGR>
 class BronKerboschConnected : public nina::BronKerbosch<GR>
 {
 public:
   /// The graph type of the input graph
   typedef GR Graph;
+  /// The graph type of the bipartite matching graph
+  typedef BGR BpGraph;
   /// Base class type
   typedef nina::BronKerbosch<GR> Parent;
   /// Product graph type
-  typedef Product<Graph> ProductType;
+  typedef Product<Graph, BpGraph> ProductType;
   /// Solver type
   typedef typename Parent::SolverType SolverType;
 
@@ -69,8 +71,8 @@ private:
   void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
 };
 
-template<typename GR>
-void BronKerboschConnected<GR>::run(SolverType)
+template<typename GR, typename BGR>
+void BronKerboschConnected<GR,BGR>::run(SolverType)
 {
   NodeList order;
   computeDegeneracy(order);
@@ -113,8 +115,8 @@ void BronKerboschConnected<GR>::run(SolverType)
   }
 }
 
-template<typename GR>
-void BronKerboschConnected<GR>::bkPivot(BitSet P, BitSet D,
+template<typename GR, typename BGR>
+void BronKerboschConnected<GR,BGR>::bkPivot(BitSet P, BitSet D,
                                         BitSet R,
                                         BitSet X, BitSet S)
 {
