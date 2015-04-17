@@ -345,9 +345,9 @@ inline void Product<GR>::generate()
   {
     for (NodeIt v(g2); v != lemon::INVALID; ++v)
     {
-      if (_mol1.getAtomType(u) == _mol2.getAtomType(v) && set1[u] == set2[v] && degSet1[u] == degSet2[v])
+      if ( set1[u] == set2[v]) //&& degSet1[u] == degSet2[v])
       {
-        assert(deg1[u] == deg2[v]);
+//        assert(deg1[u] == deg2[v]);
         // don't add product nodes for a pair of deg-1 nodes unless _shell == 0
         if (_shell == 0 || deg1[u] > 1)
         {
