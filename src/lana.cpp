@@ -109,7 +109,6 @@ int main(int argc, char** argv)
 
     LanaType lana;
 
-
     ParserType* pParserG1 =
             LanaType::createParser(g1,
                                       static_cast<LanaType::InputFormatEnum>(inputFormatG1));
@@ -130,6 +129,7 @@ int main(int argc, char** argv)
     if (lana.solve() == 0)
     {
         lana.parseOutputString(outputFormat);
+        // TODO: Test output formats other than .sif
         lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
     }
 

@@ -85,16 +85,17 @@ inline void PairwiseLocalNetworkAlignment<GR, BGR>::
 generateOutput(const typename OutputType::OutputType outType,
                const std::string& filename)
 {
-    BpMatchingMap matchingMap(_pMatchingGraph->getGm(), lemon::INVALID);
 
     int n = getNumberOfSolutions();
     for (int i = 0; i < n; i++)
     {
+        BpMatchingMap matchingMap(_pMatchingGraph->getGm(), lemon::INVALID);
         getSolution(matchingMap, i);
+
         std::cout << "Writing solution " << i << "." << std::endl;
         for (OutputVectorIt it = _outputs.begin(); it != _outputs.end(); it++)
         {
-            std::cout << "    - output type 1." << std::endl;
+            std::cout << "    - output type: " << (*it)->getExtension() << std::endl;
             if (filename.empty() || filename == "-")
             {
                 // output to std::out

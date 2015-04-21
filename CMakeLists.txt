@@ -51,21 +51,15 @@ set( Lana_Hdr
   src/product.h
 
   src/output/output.h
+  src/output/outputcsv.h
+  src/output/outputdot.h
+  src/output/outputgml.h
+  src/output/outputlgf.h
+  src/output/outputneato.h
   src/output/outputsif.h
-#  src/output/outputcsv.h
-#  src/output/outputdot.h
-#  src/output/outputgml.h
-#  src/output/outputlgf.h
-#  src/output/outputneato.h
-#  src/output/outputsif.h
-#  src/output/outputeda.h
-#  src/output/outputnoa.h
-#  src/output/outputparameters.h
-#  src/output/outputparametersamc.h
-#  src/output/outputstatamc.h
-#  src/output/outputcsvamc.h
+  src/output/outputeda.h
+  src/output/outputnoa.h
 
-#  src/lagrangegna.h
 )
 
 
