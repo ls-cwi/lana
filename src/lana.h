@@ -2,6 +2,7 @@
 // Created by Jelmer Mulder on 13/04/15.
 //
 
+#include <output/outputsif.h>
 #include "input/parser.h"
 #include "input/csvparser.h"
 #include "input/gmlparser.h"
@@ -49,6 +50,10 @@ public:
     typedef typename BpGraph::template NodeMap<BpEdge> BpMatchingMap;
 
     typedef Product<Graph, BpGraph> ProductType;
+    typedef std::vector<typename Graph::Node> NodeVector;
+    typedef typename NodeVector::const_iterator NodeVectorIt;
+    typedef std::vector<NodeVector> NodeVectorVector;
+    typedef typename std::vector<NodeVector>::const_iterator NodeVectorVectorIt;
 
     /// Type of input graph parser
     typedef Parser<Graph> ParserType;
@@ -66,7 +71,22 @@ public:
     typedef BpCandListParser<Graph, BpGraph> BpParserCandListType;
     typedef BpBlastParser<Graph, BpGraph> BpParserBlastType;
 
+    /// Type of the output
+    typedef typename Parent::OutputType OutputType;
+    typedef OutputSif<Graph, BpGraph> OutputSifType;
+//    typedef OutputLgf<Graph, BpGraph> OutputLgfType;
+//    typedef OutputDot<Graph, BpGraph> OutputDotType;
+//    typedef OutputGml<Graph, BpGraph> OutputGmlType;
+//    typedef OutputJson<Graph, BpGraph> OutputJsonType;
+//    typedef OutputNeato<Graph, BpGraph> OutputNeatoType;
+//    typedef OutputCsv<Graph, BpGraph> OutputCsvType;
+//    typedef OutputEda<Graph, BpGraph> OutputEdaType;
+//    typedef OutputNoa<Graph, BpGraph> OutputNoaType;
+//    typedef OutputAnalyse<Graph, BpGraph> OutputAnalyseType;
+
     using Parent::_pMatchingGraph;
+    using Parent::_outputs;
+    using Parent::addOutput;
 
     /// Output format type
     typedef enum {
@@ -102,6 +122,13 @@ public:
         IN_EDGE_LIST,
     } InputFormatEnum;
 
+protected:
+    NodeVectorVector _solutions;
+    ProductType* _prod;
+
+
+public:
+
 
     /// Initializes the graphs using the specified parsers
     virtual bool init(ParserType* pParserG1,
@@ -126,8 +153,13 @@ public:
 
     virtual int getNumberOfSolutions() const;
 
+    void parseOutputString(std::string const &str);
+
+    void addOutput(OutputFormatEnum fmt);
+
 private:
     TEMPLATE_GRAPH_TYPEDEFS(Graph);
+
 };
 
 
@@ -143,15 +175,17 @@ int Lana<GR, BGR>::solve() {
     Molecule<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
 
     // TODO: Use proper shell or remove it.
-    ProductType prod(m1, m2, *_pMatchingGraph, 0);
+    _prod = new ProductType(m1, m2, *_pMatchingGraph, 0);
+
+
     if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
     {
-        std::cerr << "Product graph has " << prod.getNumNodes()
-        << " nodes and " << prod.getNumEdges()
+        std::cerr << "Product graph has " << _prod->getNumNodes()
+        << " nodes and " << _prod->getNumEdges()
         << " edges" << std::endl;
     }
 
-    BronKerboschConnected<Graph, BpGraph> bk(prod);
+    BronKerboschConnected<Graph, BpGraph> bk(*_prod);
     lemon::Timer t;
     bk.run(BronKerbosch<Graph>::BK_CLASSIC);
     if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
@@ -160,13 +194,14 @@ int Lana<GR, BGR>::solve() {
         std::cerr << "#max-cliques: " << bk.getNumberOfMaxCliques() << std::endl;
     }
 
-    const std::vector< std::vector<GraphNodeType> > cliques = noAuto ? bk.getMaxCliques() : prod.removeAutomorphisms(bk.getMaxCliques());
+    // TODO: This makes a copy, a better way?
+    _solutions = noAuto ? bk.getMaxCliques() : _prod->removeAutomorphisms(bk.getMaxCliques());
 
-    prod.printDOT(std::cerr);
-    for (size_t i = 0; i < cliques.size(); ++i)
-    {
-        prod.printProductNodeVector(cliques[i], std::cerr);
-    }
+
+
+    // TODO: Remove or add argument for this.
+//    prod.printDOT(std::cout);
+
 
 
     return 0;
@@ -174,17 +209,37 @@ int Lana<GR, BGR>::solve() {
 
 template<typename GR, typename BGR>
 void Lana<GR, BGR>::getSolution(BpBoolMap &m, int i) const {
-
+    // TODO: Implement
+    assert (false && "Not yet implemented");
 }
 
 template<typename GR, typename BGR>
 void Lana<GR, BGR>::getSolution(BpMatchingMap &m, int i) const {
+    NodeVector solution = _solutions.at(i);
+    lemon::ArcLookUp<BpGraph> arcLookUpGm(_pMatchingGraph->getGm());
 
+    for (NodeVectorIt it = solution.begin(); it != solution.end(); ++it)
+    {
+        // A node from the product graph.
+        Node n = *it;
+
+        // Nodes from the original G1 and G2
+        Node n_g1 = _prod->getNodeG1(n);
+        Node n_g2 = _prod->getNodeG2(n);
+
+        // Nodes in the bipartite graph Gm
+        BpNode n1_gm = _pMatchingGraph->mapG1ToGm(n_g1);
+        BpNode n2_gm = _pMatchingGraph->mapG2ToGm(n_g2);
+
+        // Add the edge from the bipartite graph Gm
+        m[n1_gm] = m[n2_gm] = arcLookUpGm(n1_gm, n2_gm);
+    }
 }
 
 template<typename GR, typename BGR>
 int Lana<GR, BGR>::getNumberOfSolutions() const {
-    return 0;
+    std::cout << "#sol called (" << _solutions.size() << ")" << std::endl;
+    return _solutions.size();
 }
 
 
@@ -261,6 +316,90 @@ Lana<GR, BGR>::createBpParser(const std::string& filename,
     return pBpParser;
 }
 
+template<typename GR, typename BGR>
+inline void Lana<GR, BGR>::parseOutputString(const std::string& str)
+{
+    size_t idx = 0, new_idx = 0;
+    while ((new_idx = str.find(",", idx)) != std::string::npos)
+    {
+        std::string substr = str.substr(idx, new_idx - idx);
+        if (substr == "0")
+            addOutput(static_cast<OutputFormatEnum>(0));
+        else if (substr == "1")
+            addOutput(static_cast<OutputFormatEnum>(1));
+        else if (substr == "2")
+            addOutput(static_cast<OutputFormatEnum>(2));
+        else if (substr == "3")
+            addOutput(static_cast<OutputFormatEnum>(3));
+        else if (substr == "4")
+            addOutput(static_cast<OutputFormatEnum>(4));
+        else if (substr == "5")
+            addOutput(static_cast<OutputFormatEnum>(5));
+        else if (substr == "6")
+            addOutput(static_cast<OutputFormatEnum>(6));
+        else if (substr == "7")
+            addOutput(static_cast<OutputFormatEnum>(7));
+        else if (substr == "8")
+            addOutput(static_cast<OutputFormatEnum>(8));
+        else if (substr == "9")
+            addOutput(static_cast<OutputFormatEnum>(9));
+        else if (substr == "10")
+            addOutput(static_cast<OutputFormatEnum>(10));
+        else if (substr == "11")
+            addOutput(static_cast<OutputFormatEnum>(11));
+
+        idx = new_idx + 1;
+    }
+}
+template<typename GR, typename BGR>
+inline void Lana<GR, BGR>::addOutput(OutputFormatEnum fmt)
+{
+    OutputType* pOutput = NULL;
+
+    switch (fmt)
+    {
+        case BP_OUT_SIF:
+            pOutput = new OutputSifType(*_pMatchingGraph);
+            break;
+        case BP_OUT_DOT:
+//            pOutput = new OutputDotType(*_pMatchingGraph);
+//            break;
+        case BP_OUT_GML:
+//            pOutput = new OutputGmlType(*_pMatchingGraph);
+//            break;
+        case BP_OUT_LGF:
+//            pOutput = new OutputLgfType(*_pMatchingGraph);
+//            break;
+        case BP_OUT_JSON:
+//            pOutput = new OutputJsonType(*_pMatchingGraph, _options._maxJsonNodes);
+//            break;
+        case BP_OUT_NEATO:
+//            pOutput = new OutputNeatoType(*_pMatchingGraph);
+//            break;
+        case BP_OUT_CSV_MATCHED:
+//            pOutput = new OutputCsvType(*_pMatchingGraph, OutputCsvType::CSV_MATCHED);
+//            break;
+        case BP_OUT_CSV_UNMATCHED_IN_G1:
+//            pOutput = new OutputCsvType(*_pMatchingGraph, OutputCsvType::CSV_UNMATCHED_IN_G1);
+//            break;
+        case BP_OUT_CSV_UNMATCHED_IN_G2:
+//            pOutput = new OutputCsvType(*_pMatchingGraph, OutputCsvType::CSV_UNMATCHED_IN_G2);
+//            break;
+        case BP_OUT_CSV_ALIGNMENT:
+//            pOutput = new OutputCsvType(*_pMatchingGraph, OutputCsvType::CSV_ALIGNMENT);
+//            break;
+        case BP_OUT_SIF_EDGE_ATTR:
+//            pOutput = new OutputEdaType(*_pMatchingGraph);
+//            break;
+        case BP_OUT_SIF_NODE_ATTR:
+//            pOutput = new OutputNoaType(*_pMatchingGraph);
+//            break;
+            // TODO: Implement and test (?) all outputs.
+            assert (false && "Not yet implemented");
+    }
+
+    addOutput(pOutput);
+}
 
 } // namespace gna
 } // namespace nina

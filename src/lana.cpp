@@ -127,20 +127,11 @@ int main(int argc, char** argv)
     if (!lana.init(pParserG1, pParserG2, pParserGm))
         return 1;
 
-    int res = lana.solve();
-
-    lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
-    if (res > 0) {
-        std::cout << "Done..." << std::endl;
+    if (lana.solve() == 0)
+    {
+        lana.parseOutputString(outputFormat);
+        lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
     }
-
-//    lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
-
-
-//    std::cout << "G1 Nodes: " << pParserG1->getNodeCount() << std::endl;
-//    std::cout << "G1 Edges: " << pParserG1->getEdgeCount() << std::endl;
-//    std::cout << "G2 Nodes: " << pParserG2->getNodeCount() << std::endl;
-//    std::cout << "G2 Edges: " << pParserG2->getEdgeCount() << std::endl;
 
 }
 

@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <bits/stl_map.h>
 #include <lemon/maps.h>
+#include <lemon/smart_graph.h>
 #include "molecule.h"
 
 namespace nina {
@@ -164,6 +165,14 @@ private:
 
 public:
 
+  Node getNodeG1(Node uv) {
+    return _gToMol1[uv];
+  }
+
+  Node getNodeG2(Node uv) {
+    return _gToMol2[uv];
+  }
+
   void printDOT(std::ostream& out) const;
 
   void printProductNodeJSON(Node uv, std::ostream& out) const
@@ -211,6 +220,8 @@ public:
       << " (" << _mol2.getLabel(vNeighbors[i]) << ")]";
     }
   }
+
+
 
   void printProductNodeVector(const NodeVector& nodes,
                               std::ostream& out) const
@@ -329,6 +340,7 @@ inline void Product<GR,BGR>::generateDeg1NeighborSet(const Graph& g,
 template<typename GR, typename BGR>
 inline void Product<GR,BGR>::generate()
 {
+
   const Graph& g1 = _mol1.getGraph();
   const Graph& g2 = _mol2.getGraph();
 
@@ -346,20 +358,25 @@ inline void Product<GR,BGR>::generate()
   IntNodeMap deg2(g2, 0);
   determineDegrees(g2, deg2);
 
+
   // determine degrees
   generate(_mol1, deg1, set1, degSet1);
   generate(_mol2, deg2, set2, degSet2);
 
+
   // generate nodes
+  int64_t node_created = 0;
   for (NodeIt u(g1); u != lemon::INVALID; ++u)
   {
     for (NodeIt v(g2); v != lemon::INVALID; ++v)
     {
+
       BpNode bp_u = _matchingGraph.mapG1ToGm(u);
       BpNode bp_v = _matchingGraph.mapG2ToGm(v);
       BpEdge uv = arcLookUpGm(bp_u, bp_v);
-      if ( set1[u] == set2[v] && uv != lemon::INVALID) //&& degSet1[u] == degSet2[v])
+      if ( set1[u] == set2[v] && uv != lemon::INVALID )//   && degSet1[u] == degSet2[v])
       {
+        node_created++;
 //        assert(deg1[u] == deg2[v]);
         // don't add product nodes for a pair of deg-1 nodes unless _shell == 0
         if (_shell == 0 || deg1[u] > 1)
@@ -375,17 +392,21 @@ inline void Product<GR,BGR>::generate()
     }
   }
 
+  std::cerr << "Created " << node_created << " nodes." << std::endl;
+  std::cerr << "Will have to check " << node_created*node_created << " edges." << std::endl;
   // generate deg1 sets
   generateDeg1NeighborSet(g1, deg1, _g1ToDeg1Neighbors);
   generateDeg1NeighborSet(g2, deg2, _g2ToDeg1Neighbors);
 
   // generate edges
+  int64_t edge_counter = 0;
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1)
   {
     Node u1 = _gToMol1[u1v1];
     Node v1 = _gToMol2[u1v1];
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2)
     {
+      if (edge_counter++ % 500000 == 0) { std::cerr << "Checked " << edge_counter << " edges. (" << (100.*edge_counter)/(node_created*node_created / 2.) <<"%)" << std::endl;}
       if (u1v1 == u2v2)
         continue;
 

@@ -63,6 +63,11 @@ public:
     virtual void generateOutput(const typename OutputType::OutputType outType = OutputType::MINIMAL,
                                 const std::string& filename = std::string());
 
+    void addOutput(OutputType* pOutput)
+    {
+        std::cout << "Adding an output type..." << std::endl;
+        _outputs.push_back(pOutput);
+    }
 };
 
 template<typename GR, typename BGR>
@@ -86,9 +91,10 @@ generateOutput(const typename OutputType::OutputType outType,
     for (int i = 0; i < n; i++)
     {
         getSolution(matchingMap, i);
-
+        std::cout << "Writing solution " << i << "." << std::endl;
         for (OutputVectorIt it = _outputs.begin(); it != _outputs.end(); it++)
         {
+            std::cout << "    - output type 1." << std::endl;
             if (filename.empty() || filename == "-")
             {
                 // output to std::out
