@@ -392,21 +392,17 @@ inline void Product<GR,BGR>::generate()
     }
   }
 
-  std::cerr << "Created " << node_created << " nodes." << std::endl;
-  std::cerr << "Will have to check " << node_created*node_created << " edges." << std::endl;
   // generate deg1 sets
   generateDeg1NeighborSet(g1, deg1, _g1ToDeg1Neighbors);
   generateDeg1NeighborSet(g2, deg2, _g2ToDeg1Neighbors);
 
-  // generate edges
-  int64_t edge_counter = 0;
+  // generate c-edges ('red')
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1)
   {
     Node u1 = _gToMol1[u1v1];
     Node v1 = _gToMol2[u1v1];
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2)
     {
-      if (edge_counter++ % 500000 == 0) { std::cerr << "Checked " << edge_counter << " edges. (" << (100.*edge_counter)/(node_created*node_created / 2.) <<"%)" << std::endl;}
       if (u1v1 == u2v2)
         continue;
 
@@ -420,7 +416,7 @@ inline void Product<GR,BGR>::generate()
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
         bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
 
-        if (u1u2 == v1v2)
+        if (u1u2 && v1v2)
         {
           _connectivityEdge[_g.addEdge(u1v1, u2v2)] = u1u2;
           ++_numEdges;
@@ -428,6 +424,57 @@ inline void Product<GR,BGR>::generate()
       }
     }
   }
+
+
+  IntNodeMap components(_g);
+  int n_components = lemon::connectedComponents(_g, components);
+  std::vector<std::vector<Node> > component_lists(n_components, std::vector<Node>(0));
+
+
+
+  for (NodeIt k(_g); k != lemon::INVALID; ++k)
+  {
+    component_lists[components[k]].push_back(k);
+  }
+
+  for (int i=0; i< n_components; i++)
+  {
+    unsigned long size = component_lists[i].size();
+    // TODO: REMOVE THIS.
+    if (size > 500) {continue;}
+    for (int j=0; j< size; j++)
+    {
+      Node u1v1 = component_lists[i][j];
+      Node u1 = _gToMol1[u1v1];
+      Node v1 = _gToMol2[u1v1];
+      for (int k=j+1; k< size;k++)
+      {
+        Node u2v2 = component_lists[i][k];
+
+        if (u1v1 == u2v2)
+          continue;
+
+        Node u2 = _gToMol1[u2v2];
+        Node v2 = _gToMol2[u2v2];
+
+        assert(_mol1.getAtomType(u1) == _mol2.getAtomType(v1));
+
+        if (u1 != u2 && v1 != v2)
+        {
+          bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
+          bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
+
+          if (!u1u2 && !v1v2)
+          {
+            _connectivityEdge[_g.addEdge(u1v1, u2v2)] = u1u2;
+            ++_numEdges;
+          }
+        }
+      }
+    }
+  }
+  
+
 }
 
 template<typename GR, typename BGR>

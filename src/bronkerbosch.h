@@ -222,7 +222,11 @@ void BronKerbosch<GR>::report(const BitSet& R)
       clique.push_back(_bitToNode[i]);
     }
   }
-  _cliques.push_back(clique);
+  // TODO: REMOVE or make parameter.
+  if (clique.size() > 3) {
+    std::cout << "Reporting size " << clique.size() << " clique." << std::endl;
+    _cliques.push_back(clique);
+  }
   if (g_verbosity >= VERBOSE_DEBUG)
     std::cerr << std::endl;
 }

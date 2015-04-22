@@ -180,6 +180,7 @@ int Lana<GR, BGR>::solve() {
     Molecule<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
 
     // TODO: Use proper shell or remove it.
+    // TODO: Destroy?
     _prod = new ProductType(m1, m2, *_pMatchingGraph, 0);
 
 
@@ -205,7 +206,7 @@ int Lana<GR, BGR>::solve() {
 
 
     // TODO: Remove or add argument for this.
-//    prod.printDOT(std::cout);
+//    _prod->printDOT(std::cout);
 
     for (size_t i = 0; i < _solutions.size(); ++i) {
         _prod->printProductNodeVector(_solutions.at(i), std::cout);

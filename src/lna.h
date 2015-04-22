@@ -92,10 +92,8 @@ generateOutput(const typename OutputType::OutputType outType,
         BpMatchingMap matchingMap(_pMatchingGraph->getGm(), lemon::INVALID);
         getSolution(matchingMap, i);
 
-        std::cout << "Writing solution " << i << "." << std::endl;
         for (OutputVectorIt it = _outputs.begin(); it != _outputs.end(); it++)
         {
-            std::cout << "    - output type: " << (*it)->getExtension() << std::endl;
             if (filename.empty() || filename == "-")
             {
                 // output to std::out

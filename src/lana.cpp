@@ -24,6 +24,8 @@ typedef Output<Graph, BpGraph> OutputType;
 
 int main(int argc, char** argv)
 {
+    // TODO: Update readme instructions for OSX.
+
     ArgParser ap(argc, (char const *const *) argv);
 
     std::string g1, g2, gm, outputFile;
