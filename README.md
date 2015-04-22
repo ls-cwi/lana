@@ -1,18 +1,17 @@
-natalie
+lana
 =======
 
-Global pairwise network alignment
+Local pairwise network alignment
 
 Dependencies
 ------------
 
 * LEMON 1.3
-* Optional: ILOG CPLEX (>= 12.0)
 
 Compiling
 ---------
 
-Get natalie from github:
+Get lana from github:
 
     git clone <HTTPS clone URL (see on the right side of this page)>
 
@@ -26,6 +25,7 @@ First, LEMON 1.3 needs to be installed:
     make install
     
 Note: On Mac OS 10.9, comment out the following two lines and add the code below at line 162 in `CMakeLists.txt` before `make install`
+
 
     #ADD_SUBDIRECTORY(demo) 
     #ADD_SUBDIRECTORY(tools)
@@ -43,19 +43,13 @@ You can remove the LEMON sources now, i.e., `rm -rf lemon-1.3`. Next, natalie ca
 
 In case auto-detection of LEMON or CPLEX fails, do
 
-    cmake \
-    -DLIBLEMON_ROOT=~/lemon \
-    -DCPLEX_INC_DIR=~/ILOG/cplex/include/ \
-    -DCPLEX_LIB_DIR=~/ILOG/cplex/lib/x86-64_osx/static_pic \
-    -DCONCERT_LIB_DIR=~/ILOG/concert/lib/x86-64_osx/static_pic \
-    -DCONCERT_INC_DIR=~/ILOG/concert/include/ ..
+    cmake -DLIBLEMON_ROOT=~/lemon ..
 
-Running natalie
+Running lana
 ---------------
 
-To run natalie:
+To run lana:
 
-    ./natalie -if1 0 -if2 0 -ifm 0 -g1 ../data/rno.gml -g2 ../data/hsa.gml -gm ../data/rno_hsa.seqSim
-    ./natalie-cpx -if1 0 -if2 0 -ifm 0 -g1 ../data/rno.gml -g2 ../data/hsa.gml -gm ../data/rno_hsa.seqSim
+    ./lana -if1 0 -if2 0 -ifm 0 -g1 ../data/rno.gml -g2 ../data/hsa.gml -gm ../data/rno_hsa.seqSim
 
 For usage instructions specify `-h`.
