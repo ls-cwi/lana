@@ -62,6 +62,8 @@ public:
     typedef std::vector<NodeVector> NodeVectorVector;
     typedef typename std::vector<NodeVector>::const_iterator NodeVectorVectorIt;
     typedef typename BpGraph::RedNodeIt BpRedNodeIt;
+    typedef typename Graph::template NodeMap<bool> NodeFilterMap;
+    typedef typename lemon::FilterNodes<Graph, typename Graph::template NodeMap<bool> > NodeFilterGraph;
 
     /// Type of input graph parser
     typedef Parser<Graph> ParserType;
@@ -181,7 +183,9 @@ int Lana<GR, BGR>::solve() {
 
     // TODO: Use proper shell or remove it.
     // TODO: Destroy?
+    std::cout << "Creating ProductGraph" << std::endl;
     _prod = new ProductType(m1, m2, *_pMatchingGraph, 0);
+    std::cout << "Done creating ProductGraph" << std::endl;
 
 
     if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
@@ -191,26 +195,46 @@ int Lana<GR, BGR>::solve() {
         << " edges" << std::endl;
     }
 
-    BronKerboschConnected<Graph, BpGraph> bk(*_prod);
-    lemon::Timer t;
-    bk.run(BronKerbosch<Graph>::BK_CLASSIC);
-    if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+    int numComponents = _prod->getNumComponents();
+    std::cout << "Almost entering component loop..." << std::endl;
+    for (int i=0; i<numComponents; i++)
     {
-        std::cerr << "Time: " << t.realTime() << "s" << std::endl;
-        std::cerr << "#max-cliques: " << bk.getNumberOfMaxCliques() << std::endl;
+        int size = _prod->getComponentSize(i);
+        if (size < 4)
+            continue;
+        std::cout << "Component loop #" << i << "(size: " << size << ")" << std::endl;
+//        std::cout << "Analyzing component of size " << size << std::endl;
+
+        _prod->enableComponent(i);
+        std::cout << "Generating BKC." << std::endl;
+        BronKerboschConnected<NodeFilterGraph, BpGraph, Graph> bk(*_prod);
+        std::cout << "Done generating BKC." << std::endl;
+        lemon::Timer t;
+
+        std::cout << "Running BK" << std::endl;
+        bk.run(BronKerbosch<NodeFilterGraph>::BK_CLASSIC);
+        std::cout << "Done running BK" << std::endl;
+        if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+        {
+//            std::cerr << "Time: " << t.realTime() << "s" << std::endl;
+//            std::cerr << "#max-cliques: " << bk.getNumberOfMaxCliques() << std::endl;
+        }
+
+        // TODO: This makes a copy, a better way?
+        NodeVectorVector x = noAuto ? bk.getMaxCliques() : _prod->removeAutomorphisms(bk.getMaxCliques());
+//        std::cerr << "Adding size " << x.size() << " solutions." << std::endl;
+        _solutions.insert(_solutions.end(), x.begin(), x.end());
+//        std::cerr << "_solutions size is now " << _solutions.size() << std::endl;
+        _prod->disableComponent(i);
     }
-
-    // TODO: This makes a copy, a better way?
-    _solutions = noAuto ? bk.getMaxCliques() : _prod->removeAutomorphisms(bk.getMaxCliques());
-
-
+    _prod->enableAllComponents();
 
     // TODO: Remove or add argument for this.
 //    _prod->printDOT(std::cout);
-
-    for (size_t i = 0; i < _solutions.size(); ++i) {
-        _prod->printProductNodeVector(_solutions.at(i), std::cout);
-    }
+    std::cout << "# solutions found: " << _solutions.size() << std::endl;
+//    for (size_t i = 0; i < _solutions.size(); ++i) {
+//        _prod->printProductNodeVector(_solutions.at(i), std::cout);
+//    }
 
 
 

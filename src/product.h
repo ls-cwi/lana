@@ -46,6 +46,8 @@ public:
   typedef std::set<typename Graph::Node> NodeSet;
   typedef std::pair<NodeSet, NodeSet> NodeSetPair;
   typedef std::set<NodeSetPair> NodeSetPairSet;
+  typedef typename Graph::template NodeMap<bool> NodeFilterMap;
+  typedef typename lemon::FilterNodes<Graph, typename Graph::template NodeMap<bool> > NodeFilterGraph;
 
 private:
   TEMPLATE_GRAPH_TYPEDEFS(Graph);
@@ -61,6 +63,8 @@ public:
     , _matchingGraph(matchingGraph)
     , _shell(shell)
     , _g()
+    , _nodeFilter(_g, false)
+    , _fg(_g, _nodeFilter)
     , _mol1ToG(mol1.getGraph(), lemon::INVALID)
     , _mol2ToG(mol2.getGraph(), lemon::INVALID)
     , _gToMol1(_g)
@@ -123,9 +127,25 @@ public:
   int getNumNodes() const { return _numNodes; }
   int getNumEdges() const { return _numEdges; }
 
-  const Graph & getGraph() const { return _g; }
+  const NodeFilterGraph & getGraph() const { return _fg; }
 
   bool connectivityEdge(Edge e) const { return _connectivityEdge[e]; }
+
+  Node getNodeG1(Node uv) { return _gToMol1[uv]; }
+
+  Node getNodeG2(Node uv) { return _gToMol2[uv]; }
+
+  int getNumComponents() { return _components->size(); }
+
+  int getComponentSize(int index) { return (*_components)[index].size(); }
+
+  void enableComponent(int index) { setComponentState(index, true); }
+
+  void disableComponent(int index) { setComponentState(index, false); }
+
+  void enableAllComponents() { lemon::mapFill(_g, _nodeFilter, true); }
+
+  void disableAllComponents() { lemon::mapFill(_g, _nodeFilter, false); }
 
 private:
   const MoleculeType& _mol1;
@@ -133,6 +153,9 @@ private:
   const MatchingGraphType& _matchingGraph;
   const int _shell;
   Graph _g;
+  NodeMatrix* _components;
+  NodeFilterMap _nodeFilter;
+  NodeFilterGraph _fg;
   NodeNodeMap _mol1ToG;
   NodeNodeMap _mol2ToG;
   NodeNodeMap _gToMol1;
@@ -163,15 +186,10 @@ private:
 
   void determineDegrees(const Graph& g, IntNodeMap& deg);
 
+  void setComponentState(int index, bool state);
+
 public:
 
-  Node getNodeG1(Node uv) {
-    return _gToMol1[uv];
-  }
-
-  Node getNodeG2(Node uv) {
-    return _gToMol2[uv];
-  }
 
   void printDOT(std::ostream& out) const;
 
@@ -278,6 +296,7 @@ public:
     << "          \"score\": " << nodes.size() << std::endl
     << "        }";
   }
+
 };
 
 template<typename GR, typename BGR>
@@ -426,30 +445,31 @@ inline void Product<GR,BGR>::generate()
   }
 
 
-  IntNodeMap components(_g);
-  int n_components = lemon::connectedComponents(_g, components);
-  std::vector<std::vector<Node> > component_lists(n_components, std::vector<Node>(0));
+  IntNodeMap component_labels(_g);
+  int n_components = lemon::connectedComponents(_g, component_labels);
+  // TODO: Destroy?
+  _components = new NodeMatrix (n_components, std::vector<Node>(0));
 
 
 
   for (NodeIt k(_g); k != lemon::INVALID; ++k)
   {
-    component_lists[components[k]].push_back(k);
+    (*_components)[component_labels[k]].push_back(k);
   }
 
   for (int i=0; i< n_components; i++)
   {
-    unsigned long size = component_lists[i].size();
+    unsigned long size = (*_components)[i].size();
     // TODO: REMOVE THIS.
-    if (size > 500) {continue;}
+    if (size < 500) {continue;}
     for (int j=0; j< size; j++)
     {
-      Node u1v1 = component_lists[i][j];
+      Node u1v1 = (*_components)[i][j];
       Node u1 = _gToMol1[u1v1];
       Node v1 = _gToMol2[u1v1];
       for (int k=j+1; k< size;k++)
       {
-        Node u2v2 = component_lists[i][k];
+        Node u2v2 = (*_components)[i][k];
 
         if (u1v1 == u2v2)
           continue;
@@ -494,6 +514,17 @@ inline void Product<GR,BGR>::generate(const MoleculeType& mol,
   }
 }
 
+template<typename GR, typename BGR>
+inline void Product<GR,BGR>::setComponentState(int index, bool state)
+{
+  NodeVector &component = (*_components)[index];
+  unsigned long size = component.size();
+
+ for (int i=0; i<size; i++)
+  {
+    _nodeFilter[component[i]] = state;
+  }
+}
 
 template<typename GR, typename BGR>
 inline void Product<GR,BGR>::printDOT(std::ostream& out) const

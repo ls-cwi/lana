@@ -224,7 +224,6 @@ void BronKerbosch<GR>::report(const BitSet& R)
   }
   // TODO: REMOVE or make parameter.
   if (clique.size() > 3) {
-    std::cout << "Reporting size " << clique.size() << " clique." << std::endl;
     _cliques.push_back(clique);
   }
   if (g_verbosity >= VERBOSE_DEBUG)

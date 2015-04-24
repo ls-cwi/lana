@@ -16,7 +16,7 @@
 namespace nina {
 namespace gna {
 
-template<typename GR, typename BGR>
+template<typename GR, typename BGR, typename PGR>
 class BronKerboschConnected : public nina::BronKerbosch<GR>
 {
 public:
@@ -24,10 +24,12 @@ public:
   typedef GR Graph;
   /// The graph type of the bipartite matching graph
   typedef BGR BpGraph;
+  /// The graph type of the first parameter type of the ProductGraph.
+  typedef PGR ProductGraphType;
   /// Base class type
   typedef nina::BronKerbosch<GR> Parent;
   /// Product graph type
-  typedef Product<Graph, BpGraph> ProductType;
+  typedef Product<ProductGraphType , BpGraph> ProductType;
   /// Solver type
   typedef typename Parent::SolverType SolverType;
 
@@ -71,16 +73,22 @@ private:
   void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
 };
 
-template<typename GR, typename BGR>
-void BronKerboschConnected<GR,BGR>::run(SolverType)
+template<typename GR, typename BGR, typename PGR>
+void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
 {
   NodeList order;
+  std::cout << "Starting generation of Degeneracy" << std::endl;
   computeDegeneracy(order);
+  std::cout << "Done with generation of Degeneracy" << std::endl;
 
   BitSet mask(_n);
-
+  
+  int i = 0;
+  unsigned long size = order.size();
   for (typename NodeList::const_iterator it = order.begin(); it != order.end(); ++it)
   {
+    std::cout << "Checked start node " << i << "/" << size << "(" << 100.*i/size <<  "%)" << std::endl;
+    i++;
     Node v = *it;
     const BitSet& N_v = _bitNeighborhood[v];
     const BitSet& Nc_v = _restrictedBitNeighborhood[v];
@@ -115,22 +123,22 @@ void BronKerboschConnected<GR,BGR>::run(SolverType)
   }
 }
 
-template<typename GR, typename BGR>
-void BronKerboschConnected<GR,BGR>::bkPivot(BitSet P, BitSet D,
+template<typename GR, typename BGR, typename PGR>
+void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
                                         BitSet R,
                                         BitSet X, BitSet S)
 {
   // all sets are pairwise disjoint
-  assert((P & D).none());
-  assert((P & R).none());
-  assert((P & X).none());
-  assert((P & S).none());
-  assert((D & R).none());
-  assert((D & X).none());
-  assert((D & S).none());
-  assert((R & X).none());
-  assert((R & S).none());
-  assert((X & S).none());
+//  assert((P & D).none());
+//  assert((P & R).none());
+//  assert((P & X).none());
+//  assert((P & S).none());
+//  assert((D & R).none());
+//  assert((D & X).none());
+//  assert((D & S).none());
+//  assert((R & X).none());
+//  assert((R & S).none());
+//  assert((X & S).none());
 
   // let's print P, R and X
   //std::cout << "P = ";
