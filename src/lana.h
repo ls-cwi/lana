@@ -27,6 +27,10 @@
 #include "product.h"
 #include "bronkerboschconnected.h"
 
+
+// TODO: REMOVE ME
+#include <fstream>
+
 #ifndef LANA_H_
 #define LANA_H_
 
@@ -162,6 +166,9 @@ public:
 
     void parseOutputString(std::string const &str);
 
+    void printCliqueSizeFrequencies(std::ofstream &freq_file);
+
+
     void addOutput(OutputFormatEnum fmt);
 
 private:
@@ -235,6 +242,9 @@ int Lana<GR, BGR>::solve() {
 //    for (size_t i = 0; i < _solutions.size(); ++i) {
 //        _prod->printProductNodeVector(_solutions.at(i), std::cout);
 //    }
+
+
+
 
 
 
@@ -429,6 +439,38 @@ inline void Lana<GR, BGR>::addOutput(OutputFormatEnum fmt)
     }
 
     addOutput(pOutput);
+}
+
+
+template<typename GR, typename BGR>
+inline void Lana<GR, BGR>::printCliqueSizeFrequencies(std::ofstream &freq_file)
+{
+    int n_solutions = _solutions.size();
+    int solution_sizes[n_solutions];
+    int max_size = 0;
+
+    for (int i = 0; i < n_solutions; i++)
+    {
+        solution_sizes[i] = _solutions[i].size();
+        if (solution_sizes[i] > max_size)
+        {
+            max_size = solution_sizes[i];
+        }
+    }
+
+    int size_frequencies[max_size + 1];
+    memset(size_frequencies, 0, sizeof size_frequencies);
+
+    for (int j = 0; j < n_solutions; j++)
+    {
+        size_frequencies[solution_sizes[j]] = size_frequencies[solution_sizes[j]] + 1;
+    }
+
+    for (int k = 0; k <= max_size; k++)
+    {
+        freq_file << k << ", " << size_frequencies[k] << std::endl;
+    }
+    freq_file.close();
 }
 
 } // namespace gna

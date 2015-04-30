@@ -223,7 +223,7 @@ void BronKerbosch<GR>::report(const BitSet& R)
     }
   }
   // TODO: REMOVE or make parameter.
-  if (clique.size() > 3) {
+  if (clique.size() > 0) {
     _cliques.push_back(clique);
   }
   if (g_verbosity >= VERBOSE_DEBUG)

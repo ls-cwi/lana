@@ -461,7 +461,7 @@ inline void Product<GR,BGR>::generate()
   {
     unsigned long size = (*_components)[i].size();
     // TODO: REMOVE THIS.
-    if (size < 500) {continue;}
+//    if (size < 500) {continue;}
     for (int j=0; j< size; j++)
     {
       Node u1v1 = (*_components)[i][j];
