@@ -17,7 +17,7 @@ namespace nina {
 namespace gna {
 
 template<typename GR, typename BGR, typename PGR>
-class BronKerboschConnected : public nina::BronKerbosch<GR>
+class BronKerboschConnected : public nina::BronKerbosch<GR,BGR,PGR>
 {
 public:
   /// The graph type of the input graph
@@ -27,7 +27,7 @@ public:
   /// The graph type of the first parameter type of the ProductGraph.
   typedef PGR ProductGraphType;
   /// Base class type
-  typedef nina::BronKerbosch<GR> Parent;
+  typedef nina::BronKerbosch<GR,BGR,PGR> Parent;
   /// Product graph type
   typedef Product<ProductGraphType , BpGraph> ProductType;
   /// Solver type
@@ -49,13 +49,13 @@ protected:
 
 public:
   BronKerboschConnected(const ProductType& product)
-    : Parent(product.getGraph())
+    : Parent(product)
     , _restrictedBitNeighborhood(_g, BitSet(_n))
   {
     // initialize restricted neighborhood mapping
     for (EdgeIt e(_g); e != lemon::INVALID; ++e)
     {
-      if (product.connectivityEdge(e))
+      if (product.connectivityEdge(e) == ProductType::PRODUCT_RED_EDGE)
       {
         Node u = _g.u(e);
         Node v = _g.v(e);
@@ -67,9 +67,10 @@ public:
 
   virtual void run(SolverType type);
 
-private:
+protected:
   BitSetNodeMap _restrictedBitNeighborhood;
 
+private:
   void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
 };
 
@@ -228,4 +229,4 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
 } // namespace cgp
 } // namespace nina
 
-#endif // BRONKERBOSCH_H
+#endif // BRONKERBOSCHRELAXED_H

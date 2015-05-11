@@ -49,6 +49,15 @@ public:
   typedef typename Graph::template NodeMap<bool> NodeFilterMap;
   typedef typename lemon::FilterNodes<Graph, typename Graph::template NodeMap<bool> > NodeFilterGraph;
 
+  typedef enum {
+    PRODUCT_NO_EDGE,
+    PRODUCT_BLACK_EDGE,
+    PRODUCT_RED_EDGE,
+    PRODUCT_BLUE_EDGE
+  } ProductEdgeType;
+
+  typedef typename Graph::template EdgeMap<ProductEdgeType> EdgeTypeEdgeMap;
+
 private:
   TEMPLATE_GRAPH_TYPEDEFS(Graph);
   typedef typename Graph::template NodeMap<Node> NodeNodeMap;
@@ -69,7 +78,7 @@ public:
     , _mol2ToG(mol2.getGraph(), lemon::INVALID)
     , _gToMol1(_g)
     , _gToMol2(_g)
-    , _connectivityEdge(_g)
+    , _connectivityEdge(_g, PRODUCT_NO_EDGE)
     , _g1ToDeg1Neighbors(mol1.getGraph())
     , _g2ToDeg1Neighbors(mol2.getGraph())
     , _numNodes(0)
@@ -129,7 +138,8 @@ public:
 
   const NodeFilterGraph & getGraph() const { return _fg; }
 
-  bool connectivityEdge(Edge e) const { return _connectivityEdge[e]; }
+  // TODO: CHECK USAGE AND CHANGE TYPE
+  ProductEdgeType connectivityEdge(Edge e) const { return _connectivityEdge[e]; }
 
   Node getNodeG1(Node uv) { return _gToMol1[uv]; }
 
@@ -160,7 +170,8 @@ private:
   NodeNodeMap _mol2ToG;
   NodeNodeMap _gToMol1;
   NodeNodeMap _gToMol2;
-  BoolEdgeMap _connectivityEdge;
+  // TODO: Change name
+  EdgeTypeEdgeMap _connectivityEdge;
   NodeVectorMap _g1ToDeg1Neighbors;
   NodeVectorMap _g2ToDeg1Neighbors;
 
@@ -228,7 +239,7 @@ public:
     const NodeVector& uNeighbors = _g1ToDeg1Neighbors[u];
     const NodeVector& vNeighbors = _g2ToDeg1Neighbors[v];
 
-    assert(uNeighbors.size() == vNeighbors.size());
+//    assert(uNeighbors.size() == vNeighbors.size());
     for (size_t i = 0; i < uNeighbors.size(); ++i)
     {
       out << ", ";
@@ -428,16 +439,16 @@ inline void Product<GR,BGR>::generate()
       Node u2 = _gToMol1[u2v2];
       Node v2 = _gToMol2[u2v2];
 
-      assert(_mol1.getAtomType(u1) == _mol2.getAtomType(v1));
 
       if (u1 != u2 && v1 != v2)
       {
+
         bool u1u2 = arcLookUp1(u1, u2) != lemon::INVALID;
         bool v1v2 = arcLookUp2(v1, v2) != lemon::INVALID;
 
         if (u1u2 && v1v2)
         {
-          _connectivityEdge[_g.addEdge(u1v1, u2v2)] = u1u2;
+          _connectivityEdge[_g.addEdge(u1v1, u2v2)] = PRODUCT_RED_EDGE;
           ++_numEdges;
         }
       }
@@ -477,7 +488,6 @@ inline void Product<GR,BGR>::generate()
         Node u2 = _gToMol1[u2v2];
         Node v2 = _gToMol2[u2v2];
 
-        assert(_mol1.getAtomType(u1) == _mol2.getAtomType(v1));
 
         if (u1 != u2 && v1 != v2)
         {
@@ -486,7 +496,11 @@ inline void Product<GR,BGR>::generate()
 
           if (!u1u2 && !v1v2)
           {
-            _connectivityEdge[_g.addEdge(u1v1, u2v2)] = u1u2;
+            _connectivityEdge[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLACK_EDGE;
+            ++_numEdges;
+          } else if (!u1u2 || !v1v2)
+          {
+            _connectivityEdge[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
             ++_numEdges;
           }
         }
@@ -547,9 +561,13 @@ inline void Product<GR,BGR>::printDOT(std::ostream& out) const
   for (EdgeIt e(_g); e != lemon::INVALID; ++e)
   {
     out << _g.id(_g.u(e)) << " -- " << _g.id(_g.v(e));
-    if (connectivityEdge(e))
+    if (connectivityEdge(e) == PRODUCT_RED_EDGE)
     {
       out << " [color=red]";
+    }
+    else if (connectivityEdge(e) == PRODUCT_BLUE_EDGE)
+    {
+      out << " [color=blue]";
     }
     out << std::endl;
   }

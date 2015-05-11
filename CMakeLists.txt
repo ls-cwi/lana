@@ -46,8 +46,9 @@ set( Lana_Hdr
   src/input/matchinggraphshuffle.h
 
   src/molecule.h
-  src/bronkerboschconnected.h
   src/bronkerbosch.h
+  src/bronkerboschconnected.h
+  src/bronkerboschconnectedrelaxed.h
   src/product.h
 
   src/output/output.h

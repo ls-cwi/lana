@@ -139,6 +139,7 @@ int main(int argc, char** argv)
     std::ofstream clique_file;
     clique_file.open("/Users/jelmer/Desktop/test.csv");
     lana.printCliqueSizeFrequencies(clique_file);
+    clique_file.close();
 
 
 

@@ -18,12 +18,18 @@
 
 namespace nina {
 
-template<typename GR>
+template<typename GR, typename BGR, typename PGR>
 class BronKerbosch
 {
 public:
   /// The graph type of the input graph
   typedef GR Graph;
+  /// The graph type of the bipartite matching graph
+  typedef BGR BpGraph;
+  /// The graph type of the first parameter type of the ProductGraph.
+  typedef PGR ProductGraphType;
+  /// Product graph type
+  typedef nina::gna::Product<ProductGraphType , BpGraph> ProductType;
 
   typedef enum
   {
@@ -42,13 +48,14 @@ protected:
   typedef std::vector<NodeList> NodeListVector;
 
 public:
-  BronKerbosch(const Graph& g)
-    : _g(g)
-    , _n(static_cast<size_t>(lemon::countNodes(_g)))
-    , _cliques()
-    , _bitToNode()
-    , _nodeToBit(g, std::numeric_limits<size_t>::max())
-    , _bitNeighborhood(g, BitSet(_n))
+
+  BronKerbosch(const ProductType& prod)
+          : _g(prod.getGraph())
+          , _n(static_cast<size_t>(lemon::countNodes(_g)))
+          , _cliques()
+          , _bitToNode()
+          , _nodeToBit(prod.getGraph(), std::numeric_limits<size_t>::max())
+          , _bitNeighborhood(prod.getGraph(), BitSet(_n))
   {
     // initialize mappings
     _bitToNode.reserve(_n);
@@ -60,17 +67,18 @@ public:
     }
 
     // initialize neighborhoods
-    for (NodeIt v(_g); v != lemon::INVALID; ++v, ++i)
+    for (EdgeIt e(_g); e != lemon::INVALID; ++e)
     {
-      BitSet& neighborhood = _bitNeighborhood[v];
-      for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
+      if (prod.connectivityEdge(e) == ProductType::PRODUCT_BLACK_EDGE
+          || prod.connectivityEdge(e) == ProductType::PRODUCT_RED_EDGE)
       {
-        Node w = _g.oppositeNode(v, e);
-        neighborhood[_nodeToBit[w]] = 1;
+        Node u = _g.u(e);
+        Node v = _g.v(e);
+        _bitNeighborhood[u][_nodeToBit[v]] = 1;
+        _bitNeighborhood[v][_nodeToBit[u]] = 1;
       }
     }
   }
-
   virtual void run(SolverType type);
 
   void print(std::ostream& out) const;
@@ -102,8 +110,8 @@ private:
   void bkDegeneracy(const NodeList& order);
 };
 
-template<typename GR>
-size_t BronKerbosch<GR>::computeDegeneracy(NodeList& order)
+template<typename GR, typename BGR, typename PGR>
+size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
 {
   // Requires O(|V| + |E|) time
   order.clear();
@@ -120,7 +128,11 @@ size_t BronKerbosch<GR>::computeDegeneracy(NodeList& order)
   for (NodeIt v(_g); v != lemon::INVALID; ++v)
   {
     size_t d = 0;
-    for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e, ++d);
+    for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
+    {
+      ++d;
+
+    };
     deg[v] = d;
     if (d > maxDeg) maxDeg = d;
   }
@@ -179,8 +191,8 @@ size_t BronKerbosch<GR>::computeDegeneracy(NodeList& order)
   return degeneracy;
 }
 
-template<typename GR>
-void BronKerbosch<GR>::run(SolverType type)
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::run(SolverType type)
 {
 
   switch (type)
@@ -207,8 +219,8 @@ void BronKerbosch<GR>::run(SolverType type)
   }
 }
 
-template<typename GR>
-void BronKerbosch<GR>::report(const BitSet& R)
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::report(const BitSet& R)
 {
   NodeVector clique;
   for (size_t i = 0; i < R.size(); ++i)
@@ -230,8 +242,8 @@ void BronKerbosch<GR>::report(const BitSet& R)
     std::cerr << std::endl;
 }
 
-template<typename GR>
-void BronKerbosch<GR>::printBitSet(const BitSet& S, std::ostream& out) const
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::printBitSet(const BitSet& S, std::ostream& out) const
 {
   out << "{";
   bool first = true;
@@ -253,8 +265,8 @@ void BronKerbosch<GR>::printBitSet(const BitSet& S, std::ostream& out) const
   out << "}";
 }
 
-template<typename GR>
-void BronKerbosch<GR>::bkDegeneracy(const NodeList& order)
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::bkDegeneracy(const NodeList& order)
 {
   BitSet mask(_n);
 
@@ -272,8 +284,8 @@ void BronKerbosch<GR>::bkDegeneracy(const NodeList& order)
   }
 }
 
-template<typename GR>
-void BronKerbosch<GR>::bkPivot(BitSet P, BitSet R, BitSet X)
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::bkPivot(BitSet P, BitSet R, BitSet X)
 {
   assert((P & X).none());
   assert((P & R).none());
@@ -340,8 +352,8 @@ void BronKerbosch<GR>::bkPivot(BitSet P, BitSet R, BitSet X)
    */
 }
 
-template<typename GR>
-void BronKerbosch<GR>::bkClassic(BitSet P, BitSet R, BitSet X)
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::bkClassic(BitSet P, BitSet R, BitSet X)
 {
   assert((P & X).none());
   assert((P & R).none());
@@ -388,8 +400,8 @@ void BronKerbosch<GR>::bkClassic(BitSet P, BitSet R, BitSet X)
    */
 }
 
-template<typename GR>
-void BronKerbosch<GR>::print(std::ostream& out) const
+template<typename GR, typename BGR, typename PGR>
+void BronKerbosch<GR,BGR,PGR>::print(std::ostream& out) const
 {
   for (size_t i = 0; i < _cliques.size(); ++i)
   {

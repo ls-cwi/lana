@@ -26,6 +26,7 @@
 #include "molecule.h"
 #include "product.h"
 #include "bronkerboschconnected.h"
+#include "bronkerboschconnectedrelaxed.h"
 
 
 // TODO: REMOVE ME
@@ -68,6 +69,9 @@ public:
     typedef typename BpGraph::RedNodeIt BpRedNodeIt;
     typedef typename Graph::template NodeMap<bool> NodeFilterMap;
     typedef typename lemon::FilterNodes<Graph, typename Graph::template NodeMap<bool> > NodeFilterGraph;
+    typedef BronKerbosch<NodeFilterGraph, BpGraph, Graph> BronKerboschType;
+    typedef BronKerboschConnected<NodeFilterGraph, BpGraph, Graph> BronKerboschConnectedType;
+    typedef BronKerboschConnectedRelaxed<NodeFilterGraph, BpGraph, Graph> BronKerboschConnectedRelaxedType;
 
     /// Type of input graph parser
     typedef Parser<Graph> ParserType;
@@ -207,43 +211,43 @@ int Lana<GR, BGR>::solve() {
     for (int i=0; i<numComponents; i++)
     {
         int size = _prod->getComponentSize(i);
+        // TODO: Remove this or make parameter.
         if (size < 4)
             continue;
         std::cout << "Component loop #" << i << "(size: " << size << ")" << std::endl;
-//        std::cout << "Analyzing component of size " << size << std::endl;
 
         _prod->enableComponent(i);
         std::cout << "Generating BKC." << std::endl;
-        BronKerboschConnected<NodeFilterGraph, BpGraph, Graph> bk(*_prod);
+        BronKerboschConnectedRelaxedType bk(*_prod);
         std::cout << "Done generating BKC." << std::endl;
         lemon::Timer t;
 
         std::cout << "Running BK" << std::endl;
-        bk.run(BronKerbosch<NodeFilterGraph>::BK_CLASSIC);
+        bk.run(BronKerboschType::BK_CLASSIC);
         std::cout << "Done running BK" << std::endl;
         if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
         {
-//            std::cerr << "Time: " << t.realTime() << "s" << std::endl;
-//            std::cerr << "#max-cliques: " << bk.getNumberOfMaxCliques() << std::endl;
+            std::cerr << "Time: " << t.realTime() << "s" << std::endl;
+            std::cerr << "#max-cliques: " << bk.getNumberOfMaxCliques() << std::endl;
         }
 
         // TODO: This makes a copy, a better way?
         NodeVectorVector x = noAuto ? bk.getMaxCliques() : _prod->removeAutomorphisms(bk.getMaxCliques());
-//        std::cerr << "Adding size " << x.size() << " solutions." << std::endl;
         _solutions.insert(_solutions.end(), x.begin(), x.end());
-//        std::cerr << "_solutions size is now " << _solutions.size() << std::endl;
         _prod->disableComponent(i);
     }
     _prod->enableAllComponents();
 
-    // TODO: Remove or add argument for this.
-//    _prod->printDOT(std::cout);
     std::cout << "# solutions found: " << _solutions.size() << std::endl;
-//    for (size_t i = 0; i < _solutions.size(); ++i) {
-//        _prod->printProductNodeVector(_solutions.at(i), std::cout);
-//    }
+    for (size_t i=0; i<_solutions.size(); ++i) {
+        _prod->printProductNodeVector(_solutions.at(i), std::cout);
+    }
 
-
+    // TODO: Remove or add argument for this.
+    std::ofstream dot_file;
+    dot_file.open("/Users/jelmer/Desktop/dot.dot");
+    _prod->printDOT(dot_file);
+    dot_file.close();
 
 
 
