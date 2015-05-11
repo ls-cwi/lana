@@ -138,7 +138,6 @@ public:
 
   const NodeFilterGraph & getGraph() const { return _fg; }
 
-  // TODO: CHECK USAGE AND CHANGE TYPE
   ProductEdgeType connectivityEdge(Edge e) const { return _connectivityEdge[e]; }
 
   Node getNodeG1(Node uv) { return _gToMol1[uv]; }

@@ -10,6 +10,7 @@
 
 #include "bronkerbosch.h"
 #include "product.h"
+#include "options.h"
 #include <boost/dynamic_bitset.hpp>
 #include <lemon/core.h>
 
@@ -46,10 +47,11 @@ protected:
   using Parent::computeDegeneracy;
   using Parent::report;
   using Parent::printBitSet;
+  using Parent::_options;
 
 public:
-  BronKerboschConnected(const ProductType& product)
-    : Parent(product)
+  BronKerboschConnected(const ProductType& product, const Options& options)
+    : Parent(product, options)
     , _restrictedBitNeighborhood(_g, BitSet(_n))
   {
     // initialize restricted neighborhood mapping

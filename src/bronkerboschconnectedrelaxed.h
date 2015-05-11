@@ -8,6 +8,7 @@
 #include "bronkerbosch.h"
 #include "bronkerboschconnected.h"
 #include "product.h"
+#include "options.h"
 #include <boost/dynamic_bitset.hpp>
 #include <lemon/core.h>
 
@@ -45,10 +46,11 @@ protected:
     using Parent::computeDegeneracy;
     using Parent::report;
     using Parent::printBitSet;
+    using Parent::_options;
 
 public:
-    BronKerboschConnectedRelaxed(const ProductType& product)
-            : Parent(product)
+    BronKerboschConnectedRelaxed(const ProductType& product, const Options& options)
+            : Parent(product, options)
             , _blueBitNeighborhood(_g, BitSet(_n))
     {
         // initialize blue neighborhood mapping
@@ -131,7 +133,7 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D, BitSe
                                                 BitSet X, BitSet S, int blueEdgesTaken)
 {
     // TODO: Make parameter
-    if (blueEdgesTaken > 3)
+    if (blueEdgesTaken > _options._nMaxBlueEdges)
     {
         std::cout << "Too many blue edges taken already... (" << blueEdgesTaken << ")" << std::endl;
         return;
@@ -225,8 +227,7 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D, BitSe
                 X[i] = 1;
             }
         }
-        std::cout << "B  count: " << B.count() << std::endl;
-        std::cout << "BC count: " << BC.count() << std::endl;
+        // TODO: Better way than copy the entire loop?
         BitSet BC_diff_Nu = BC - _bitNeighborhood[max_u];
         for (size_t i = 0; i < BC.size(); ++i)
         {

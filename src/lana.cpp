@@ -27,6 +27,7 @@ int main(int argc, char** argv)
     // TODO: Update readme instructions for OSX.
 
     ArgParser ap(argc, (char const *const *) argv);
+    Options options;
 
     std::string g1, g2, gm, outputFile;
     int inputFormatG1 = static_cast<int>(LanaType::IN_STRING);
@@ -34,6 +35,7 @@ int main(int argc, char** argv)
     int inputFormatGm = static_cast<int>(LanaType::BP_IN_BLAST);
     int verbosityLevel = static_cast<int>(VERBOSE_NON_ESSENTIAL);
     int outputType = static_cast<int>(OutputType::ORIG_EDGES);
+    int nSamples = 0;
     std::string outputFormat = "3";
 
     ap
@@ -89,8 +91,21 @@ int main(int argc, char** argv)
                     "     1 - Nodes, matching edges and original edges present\n"
                     "         in the solution (default)\n"
                     "     2 - Nodes and matching edges present in the solution\n"
-                    "         as well as all original edges", outputType, false);
+                    "         as well as all original edges", outputType, false)
+
+            .refOption("mcs", "Minimum clique size. Smaller cliques are not processed. (default: 0)",
+                       options._minCliqueSize, false)
+            .refOption("mbe", "Maximum blue edges. The higher this number, the more\n"
+                    "blue edges can be used, and thus the more relaxation is applied.\n"
+                    "(default: 0)",
+                       options._nMaxBlueEdges, false)
+            .refOption("p", "Computer p-value using specified number of samples (default: 0)",
+                       nSamples, false)
+            .boolOption("sol", "Print a solution in Human-Readable format to STDOUT.");
+
     ap.parse();
+
+    options._printProductVector = ap.given("sol");
 
     if (ap.given("version"))
     {
@@ -109,7 +124,7 @@ int main(int argc, char** argv)
 
     g_verbosity = static_cast<VerbosityLevel>(verbosityLevel);
 
-    LanaType lana;
+    LanaType lana(options);
 
     ParserType* pParserG1 =
             LanaType::createParser(g1,

@@ -50,6 +50,7 @@ set( Lana_Hdr
   src/bronkerboschconnected.h
   src/bronkerboschconnectedrelaxed.h
   src/product.h
+  src/options.h
 
   src/output/output.h
   src/output/outputcsv.h

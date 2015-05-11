@@ -27,6 +27,7 @@
 #include "product.h"
 #include "bronkerboschconnected.h"
 #include "bronkerboschconnectedrelaxed.h"
+#include "options.h"
 
 
 // TODO: REMOVE ME
@@ -137,9 +138,16 @@ public:
         IN_EDGE_LIST,
     } InputFormatEnum;
 
+
+    Lana(const Options& options)
+        : Parent()
+        , _options(options)
+    {
+    }
 protected:
     NodeVectorVector _solutions;
     ProductType* _prod;
+    Options _options;
 
 
 public:
@@ -182,7 +190,6 @@ private:
 
 
 
-
 template<typename GR, typename BGR>
 int Lana<GR, BGR>::solve() {
 
@@ -211,14 +218,15 @@ int Lana<GR, BGR>::solve() {
     for (int i=0; i<numComponents; i++)
     {
         int size = _prod->getComponentSize(i);
-        // TODO: Remove this or make parameter.
-        if (size < 4)
+        if (size <= std::max<int>(2, _options._minCliqueSize))
+        {
             continue;
+        }
         std::cout << "Component loop #" << i << "(size: " << size << ")" << std::endl;
 
         _prod->enableComponent(i);
         std::cout << "Generating BKC." << std::endl;
-        BronKerboschConnectedRelaxedType bk(*_prod);
+        BronKerboschConnectedRelaxedType bk(*_prod, _options);
         std::cout << "Done generating BKC." << std::endl;
         lemon::Timer t;
 

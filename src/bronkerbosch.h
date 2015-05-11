@@ -15,6 +15,7 @@
 #include <boost/dynamic_bitset.hpp>
 #include <lemon/core.h>
 #include "verbose.h"
+#include "options.h"
 
 namespace nina {
 
@@ -49,9 +50,10 @@ protected:
 
 public:
 
-  BronKerbosch(const ProductType& prod)
+  BronKerbosch(const ProductType& prod, const Options& options)
           : _g(prod.getGraph())
           , _n(static_cast<size_t>(lemon::countNodes(_g)))
+          , _options(options)
           , _cliques()
           , _bitToNode()
           , _nodeToBit(prod.getGraph(), std::numeric_limits<size_t>::max())
@@ -90,6 +92,7 @@ public:
 protected:
   const Graph& _g;
   const size_t _n;
+  const Options& _options;
   std::vector<NodeVector> _cliques;
   std::vector<Node> _bitToNode;
   BitNodeMap _nodeToBit;
@@ -234,8 +237,7 @@ void BronKerbosch<GR,BGR,PGR>::report(const BitSet& R)
       clique.push_back(_bitToNode[i]);
     }
   }
-  // TODO: REMOVE or make parameter.
-  if (clique.size() > 0) {
+  if (clique.size() >= _options._minCliqueSize) {
     _cliques.push_back(clique);
   }
   if (g_verbosity >= VERBOSE_DEBUG)
