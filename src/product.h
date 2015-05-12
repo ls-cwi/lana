@@ -470,8 +470,6 @@ inline void Product<GR,BGR>::generate()
   for (int i=0; i< n_components; i++)
   {
     unsigned long size = (*_components)[i].size();
-    // TODO: REMOVE THIS.
-//    if (size < 500) {continue;}
     for (int j=0; j< size; j++)
     {
       Node u1v1 = (*_components)[i][j];
@@ -533,7 +531,7 @@ inline void Product<GR,BGR>::setComponentState(int index, bool state)
   NodeVector &component = (*_components)[index];
   unsigned long size = component.size();
 
- for (int i=0; i<size; i++)
+  for (int i = 0; i < size; i++)
   {
     _nodeFilter[component[i]] = state;
   }

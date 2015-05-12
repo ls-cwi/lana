@@ -223,6 +223,7 @@ int Lana<GR, BGR>::solve() {
         _prod->enableComponent(i);
         std::cout << "Generating BKC." << std::endl;
         BronKerboschConnectedRelaxedType bk(*_prod, _options);
+//        BronKerboschConnectedType bk(*_prod, _options);
         std::cout << "Done generating BKC." << std::endl;
         lemon::Timer t;
 

@@ -134,7 +134,6 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
     for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
     {
       ++d;
-
     };
     deg[v] = d;
     if (d > maxDeg) maxDeg = d;

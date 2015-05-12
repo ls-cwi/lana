@@ -7,6 +7,7 @@
 
 #include <lemon/core.h>
 
+// TODO: Rename + refactor class or try to remove entirely.
 template <typename GR>
 class Molecule {
 
