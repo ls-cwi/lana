@@ -193,8 +193,6 @@ private:
 template<typename GR, typename BGR>
 int Lana<GR, BGR>::solve() {
 
-    // TODO: Properly initialize and pass these variables elsewhere.
-    bool noAuto = false;
 
     Molecule<Graph> m1(_pMatchingGraph->getG1(), _pMatchingGraph->getMapLabelG1());
     Molecule<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
@@ -214,14 +212,12 @@ int Lana<GR, BGR>::solve() {
     }
 
     int numComponents = _prod->getNumComponents();
-    std::cout << "Almost entering component loop..." << std::endl;
     for (int i=0; i<numComponents; i++)
     {
         int size = _prod->getComponentSize(i);
         if (size <= std::max<int>(2, _options._minCliqueSize))
-        {
             continue;
-        }
+
         std::cout << "Component loop #" << i << "(size: " << size << ")" << std::endl;
 
         _prod->enableComponent(i);
@@ -240,15 +236,18 @@ int Lana<GR, BGR>::solve() {
         }
 
         // TODO: This makes a copy, a better way?
-        NodeVectorVector x = noAuto ? bk.getMaxCliques() : _prod->removeAutomorphisms(bk.getMaxCliques());
+        NodeVectorVector x = _options._removeAutomorphisms ? _prod->removeAutomorphisms(bk.getMaxCliques()) : bk.getMaxCliques();
         _solutions.insert(_solutions.end(), x.begin(), x.end());
         _prod->disableComponent(i);
     }
     _prod->enableAllComponents();
 
-    std::cout << "# solutions found: " << _solutions.size() << std::endl;
-    for (size_t i=0; i<_solutions.size(); ++i) {
-        _prod->printProductNodeVector(_solutions.at(i), std::cout);
+    if (_options._printProductVector)
+    {
+        std::cout << "# solutions found: " << _solutions.size() << std::endl;
+        for (size_t i=0; i<_solutions.size(); ++i) {
+            _prod->printProductNodeVector(_solutions.at(i), std::cout);
+        }
     }
 
     // TODO: Remove or add argument for this.

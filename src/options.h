@@ -13,12 +13,14 @@ struct Options
     int _nMaxCliques;
     int _nMaxBlueEdges;
     bool _printProductVector;
+    bool _removeAutomorphisms;
 
     Options()
             :_minCliqueSize(0)
             , _nMaxCliques(0)
             , _nMaxBlueEdges(0)
             , _printProductVector(false)
+            , _removeAutomorphisms(true)
     {
     }
 };

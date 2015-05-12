@@ -132,12 +132,7 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D, BitSe
                                                 BitSet R,
                                                 BitSet X, BitSet S, int blueEdgesTaken)
 {
-    // TODO: Make parameter
-    if (blueEdgesTaken > _options._nMaxBlueEdges)
-    {
-        std::cout << "Too many blue edges taken already... (" << blueEdgesTaken << ")" << std::endl;
-        return;
-    }
+    if (blueEdgesTaken > _options._nMaxBlueEdges) return;
     // all sets are pairwise disjoint
 //  assert((P & D).none());
 //  assert((P & R).none());
@@ -233,7 +228,6 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D, BitSe
         {
             if (BC_diff_Nu[i])
             {
-                std::cout << "Checking a BC  node." << std::endl;
                 Node v = _bitToNode[i];
                 const BitSet& N_v = _bitNeighborhood[v];
                 const BitSet& Nb_v = _blueBitNeighborhood[v];
@@ -246,7 +240,6 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D, BitSe
                 BitSet R_ = R;
                 R_[_nodeToBit[v]] = 1;
                 unsigned long count = (Nb_v & R_).count();
-                if (count > 0) std::cout << "Adding " << count << " blue edges." << std::endl;
                 int blueEdgesTaken_ = blueEdgesTaken + count;
 
                 BitSet X_ = X | ( S & Nc_v );

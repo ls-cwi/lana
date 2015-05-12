@@ -101,10 +101,12 @@ int main(int argc, char** argv)
                        options._nMaxBlueEdges, false)
             .refOption("p", "Computer p-value using specified number of samples (default: 0)",
                        nSamples, false)
+            .boolOption("a", "Do not remove automorphisms.")
             .boolOption("sol", "Print a solution in Human-Readable format to STDOUT.");
 
     ap.parse();
 
+    options._removeAutomorphisms = !ap.given("a");
     options._printProductVector = ap.given("sol");
 
     if (ap.given("version"))
