@@ -23,14 +23,11 @@
 #include "input/bpcandlistparser.h"
 #include "input/bplgfparser.h"
 #include "lna.h"
-#include "molecule.h"
+#include "Protein.h"
 #include "product.h"
 #include "bronkerboschconnected.h"
 #include "bronkerboschconnectedrelaxed.h"
 #include "options.h"
-
-
-// TODO: REMOVE ME
 #include <fstream>
 
 #ifndef LANA_H_
@@ -144,6 +141,11 @@ public:
         , _options(options)
     {
     }
+
+    ~Lana()
+    {
+        delete _prod;
+    }
 protected:
     NodeVectorVector _solutions;
     ProductType* _prod;
@@ -194,13 +196,11 @@ template<typename GR, typename BGR>
 int Lana<GR, BGR>::solve() {
 
 
-    Molecule<Graph> m1(_pMatchingGraph->getG1(), _pMatchingGraph->getMapLabelG1());
-    Molecule<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
+    Protein<Graph> m1(_pMatchingGraph->getG1(), _pMatchingGraph->getMapLabelG1());
+    Protein<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
 
-    // TODO: Use proper shell or remove it.
-    // TODO: Destroy?
     std::cout << "Creating ProductGraph" << std::endl;
-    _prod = new ProductType(m1, m2, *_pMatchingGraph, 0);
+    _prod = new ProductType(m1, m2, *_pMatchingGraph);
     std::cout << "Done creating ProductGraph" << std::endl;
 
 
@@ -318,6 +318,7 @@ Lana<GR, BGR>::createParser(const std::string& filename,
     ParserType* pParser = NULL;
     switch (fmt)
     {
+        // TODO: Do these have to be destroyed?
         case IN_GML:
             pParser = new ParserGmlType(filename);
             break;

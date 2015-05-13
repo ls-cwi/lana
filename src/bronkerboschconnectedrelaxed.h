@@ -97,11 +97,11 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::run(SolverType)
     const BitSet& N_v = _bitNeighborhood[v];
     const BitSet& Nc_v = _restrictedBitNeighborhood[v];
     const BitSet& Nb_v = _blueBitNeighborhood[v];
-    const BitSet Nd_v = N_v - Nc_v;
+    const BitSet Nd_v = (N_v - Nc_v);
 
     // ~mask includes v but we're fine as N_v, Nc_v and Nd_v exclude v
     BitSet P = Nc_v & ~mask;
-    BitSet D = (Nd_v | Nb_v ) & ~mask;
+    BitSet D = (Nd_v | Nb_v) & ~mask;
     BitSet X = Nc_v & mask;
     BitSet S = Nd_v & mask;
 
@@ -217,8 +217,8 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
         bkPivot(P_ & (N_v ),
                 D_ & (N_v | Nb_v),
                 R_,
-                X_ & N_v,
-                S_ & N_v,
+                X_ & (N_v ),
+                S_ & (N_v ),
                 blueEdgesTaken_);
         P[i] = 0;
         X[i] = 1;

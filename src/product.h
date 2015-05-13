@@ -20,7 +20,8 @@
 #include <bits/stl_map.h>
 #include <lemon/maps.h>
 #include <lemon/smart_graph.h>
-#include "molecule.h"
+#include <input/matchinggraph.h>
+#include "Protein.h"
 
 namespace nina {
 namespace gna {
@@ -38,14 +39,13 @@ public:
 
   typedef typename BpGraph::Node BpNode;
   typedef typename BpGraph::Edge BpEdge;
-  typedef Molecule<Graph> MoleculeType;
+  typedef Protein<Graph> ProteinType;
   typedef std::vector<typename Graph::Node> NodeVector;
   typedef typename NodeVector::const_iterator NodeVectorIt;
   typedef std::vector<NodeVector> NodeMatrix;
   typedef typename NodeMatrix::const_iterator NodeMatrixIt;
   typedef std::set<typename Graph::Node> NodeSet;
   typedef std::pair<NodeSet, NodeSet> NodeSetPair;
-  typedef std::set<NodeSetPair> NodeSetPairSet;
   typedef typename Graph::template NodeMap<bool> NodeFilterMap;
   typedef typename lemon::FilterNodes<Graph, typename Graph::template NodeMap<bool> > NodeFilterGraph;
 
@@ -66,26 +66,31 @@ private:
   typedef typename Graph::template NodeMap<NodeVector> NodeVectorMap;
 
 public:
-  Product(const MoleculeType& mol1, const MoleculeType& mol2, const MatchingGraphType& matchingGraph, int shell)
-    : _mol1(mol1)
-    , _mol2(mol2)
+  Product(const ProteinType &prot1, const ProteinType &prot2, const MatchingGraphType& matchingGraph)
+    : _prot1(prot1)
+    , _prot2(prot2)
     , _matchingGraph(matchingGraph)
-    , _shell(shell)
     , _g()
     , _nodeFilter(_g, false)
     , _fg(_g, _nodeFilter)
-    , _mol1ToG(mol1.getGraph(), lemon::INVALID)
-    , _mol2ToG(mol2.getGraph(), lemon::INVALID)
-    , _gToMol1(_g)
-    , _gToMol2(_g)
-    , _connectivityEdge(_g, PRODUCT_NO_EDGE)
-    , _g1ToDeg1Neighbors(mol1.getGraph())
-    , _g2ToDeg1Neighbors(mol2.getGraph())
+    , _prot1ToG(prot1.getGraph(), lemon::INVALID)
+    , _prot2ToG(prot2.getGraph(), lemon::INVALID)
+    , _gToProt1(_g)
+    , _gToProt2(_g)
+    , _edgeType(_g, PRODUCT_NO_EDGE)
+    , _g1ToDeg1Neighbors(prot1.getGraph())
+    , _g2ToDeg1Neighbors(prot2.getGraph())
     , _numNodes(0)
     , _numEdges(0)
   {
     generate();
   }
+
+  ~Product()
+  {
+    delete _components;
+  }
+
 
 
 
@@ -107,8 +112,8 @@ public:
       for (NodeVectorIt it = fragmentIt->begin(); it != fragmentIt->end(); ++it)
       {
         Node uv = *it;
-        Node u = _gToMol1[uv];
-        Node v = _gToMol2[uv];
+        Node u = _gToProt1[uv];
+        Node v = _gToProt2[uv];
 
         fragment1.insert(u);
         fragment2.insert(v);
@@ -138,11 +143,11 @@ public:
 
   const NodeFilterGraph & getGraph() const { return _fg; }
 
-  ProductEdgeType connectivityEdge(Edge e) const { return _connectivityEdge[e]; }
+  ProductEdgeType connectivityEdge(Edge e) const { return _edgeType[e]; }
 
-  Node getNodeG1(Node uv) { return _gToMol1[uv]; }
+  Node getNodeG1(Node uv) { return _gToProt1[uv]; }
 
-  Node getNodeG2(Node uv) { return _gToMol2[uv]; }
+  Node getNodeG2(Node uv) { return _gToProt2[uv]; }
 
   int getNumComponents() { return _components->size(); }
 
@@ -157,20 +162,18 @@ public:
   void disableAllComponents() { lemon::mapFill(_g, _nodeFilter, false); }
 
 private:
-  const MoleculeType& _mol1;
-  const MoleculeType& _mol2;
+  const ProteinType &_prot1;
+  const ProteinType &_prot2;
   const MatchingGraphType& _matchingGraph;
-  const int _shell;
   Graph _g;
   NodeMatrix* _components;
   NodeFilterMap _nodeFilter;
   NodeFilterGraph _fg;
-  NodeNodeMap _mol1ToG;
-  NodeNodeMap _mol2ToG;
-  NodeNodeMap _gToMol1;
-  NodeNodeMap _gToMol2;
-  // TODO: Change name
-  EdgeTypeEdgeMap _connectivityEdge;
+  NodeNodeMap _prot1ToG;
+  NodeNodeMap _prot2ToG;
+  NodeNodeMap _gToProt1;
+  NodeNodeMap _gToProt2;
+  EdgeTypeEdgeMap _edgeType;
   NodeVectorMap _g1ToDeg1Neighbors;
   NodeVectorMap _g2ToDeg1Neighbors;
 
@@ -179,20 +182,13 @@ private:
 
   void generate();
 
-  void generate(const MoleculeType& mol,
+  void generate(const ProteinType &prot,
                 const IntNodeMap& deg,
-                IntSetNodeMap& intSet,
                 IntSetNodeMap& degSet);
 
   void generateDeg1NeighborSet(const Graph& g,
                                const IntNodeMap& deg,
                                NodeVectorMap& deg1NeighborMap);
-
-  void dfs(const IntNodeMap& deg,
-           const Node v, const int depth,
-           const MoleculeType& mol,
-           BoolNodeMap& visited,
-           IntSet& s, IntSet& ds);
 
   void determineDegrees(const Graph& g, IntNodeMap& deg);
 
@@ -205,12 +201,12 @@ public:
 
   void printProductNodeJSON(Node uv, std::ostream& out) const
   {
-    Node u = _gToMol1[uv];
-    Node v = _gToMol2[uv];
+    Node u = _gToProt1[uv];
+    Node v = _gToProt2[uv];
 
     out << "            {" << std::endl
-    << "              \"id1\": " << _mol1.getLabel(u) << "," << std::endl
-    << "              \"id2\": " << _mol2.getLabel(v) << "," << std::endl
+    << "              \"id1\": " << _prot1.getLabel(u) << "," << std::endl
+    << "              \"id2\": " << _prot2.getLabel(v) << "," << std::endl
     << "            }";
 
     const NodeVector& uNeighbors = _g1ToDeg1Neighbors[u];
@@ -221,19 +217,19 @@ public:
     {
       out << "," << std::endl;
       out << "            {" << std::endl
-      << "              \"id1\": " << _mol1.getLabel(uNeighbors[i]) << "," << std::endl
-      << "              \"id2\": " << _mol2.getLabel(vNeighbors[i]) << "," << std::endl
+      << "              \"id1\": " << _prot1.getLabel(uNeighbors[i]) << "," << std::endl
+      << "              \"id2\": " << _prot2.getLabel(vNeighbors[i]) << "," << std::endl
       << "            }";
     }
   }
 
   void printProductNode(Node uv, std::ostream& out) const
   {
-    Node u = _gToMol1[uv];
-    Node v = _gToMol2[uv];
+    Node u = _gToProt1[uv];
+    Node v = _gToProt2[uv];
 
-    out << "[" << _g.id(uv) << ": " << _mol1.getLabel2(u) << " -> "
-    << _mol2.getLabel2(v) << "]";
+    out << "[" << _g.id(uv) << ": " << _prot1.getLabel(u) << " -> "
+    << _prot2.getLabel(v) << "]";
 
     const NodeVector& uNeighbors = _g1ToDeg1Neighbors[u];
     const NodeVector& vNeighbors = _g2ToDeg1Neighbors[v];
@@ -242,10 +238,10 @@ public:
     for (size_t i = 0; i < uNeighbors.size(); ++i)
     {
       out << ", ";
-      out << "[" << _mol1.getLabel2(uNeighbors[i])
-      << " (" << _mol1.getLabel(uNeighbors[i]) << ") , "
-      << _mol2.getLabel2(vNeighbors[i])
-      << " (" << _mol2.getLabel(vNeighbors[i]) << ")]";
+      out << "[" << _prot1.getLabel(uNeighbors[i])
+      << " (" << _prot1.getLabel(uNeighbors[i]) << ") , "
+      << _prot2.getLabel(vNeighbors[i])
+      << " (" << _prot2.getLabel(vNeighbors[i]) << ")]";
     }
   }
 
@@ -309,32 +305,7 @@ public:
 
 };
 
-template<typename GR, typename BGR>
-inline void Product<GR,BGR>::dfs(const IntNodeMap& deg,
-                             const Node v, const int depth,
-                             const MoleculeType& mol,
-                             BoolNodeMap& visited,
-                             IntSet& s, IntSet& ds)
-{
-  const Graph& g = mol.getGraph();
-  visited[v] = true;
-  s.insert(mol.getAtomType(v));
-  ds.insert(deg[v]);
-
-  if (depth < _shell)
-  {
-    for (IncEdgeIt e(g, v); e != lemon::INVALID; ++e)
-    {
-      Node w = g.oppositeNode(v, e);
-      if (!visited[w])
-      {
-        dfs(deg, w, depth + 1, mol, visited, s, ds);
-      }
-    }
-  }
-}
-
-template<typename GR, typename BGR>
+    template<typename GR, typename BGR>
 inline void Product<GR,BGR>::determineDegrees(const Graph& g, IntNodeMap& deg)
 {
   for (NodeIt v(g); v != lemon::INVALID; ++v)
@@ -370,16 +341,14 @@ template<typename GR, typename BGR>
 inline void Product<GR,BGR>::generate()
 {
 
-  const Graph& g1 = _mol1.getGraph();
-  const Graph& g2 = _mol2.getGraph();
+  const Graph& g1 = _prot1.getGraph();
+  const Graph& g2 = _prot2.getGraph();
 
   lemon::ArcLookUp<Graph> arcLookUp1(g1);
   lemon::ArcLookUp<Graph> arcLookUp2(g2);
   lemon::ArcLookUp<BpGraph> arcLookUpGm(_matchingGraph.getGm());
 
-  IntSetNodeMap set1(g1);
   IntSetNodeMap degSet1(g1);
-  IntSetNodeMap set2(g2);
   IntSetNodeMap degSet2(g2);
 
   IntNodeMap deg1(g1, 0);
@@ -389,12 +358,11 @@ inline void Product<GR,BGR>::generate()
 
 
   // determine degrees
-  generate(_mol1, deg1, set1, degSet1);
-  generate(_mol2, deg2, set2, degSet2);
+  generate(_prot1, deg1, degSet1);
+  generate(_prot2, deg2, degSet2);
 
 
   // generate nodes
-  int64_t node_created = 0;
   for (NodeIt u(g1); u != lemon::INVALID; ++u)
   {
     for (NodeIt v(g2); v != lemon::INVALID; ++v)
@@ -403,20 +371,15 @@ inline void Product<GR,BGR>::generate()
       BpNode bp_u = _matchingGraph.mapG1ToGm(u);
       BpNode bp_v = _matchingGraph.mapG2ToGm(v);
       BpEdge uv = arcLookUpGm(bp_u, bp_v);
-      if ( set1[u] == set2[v] && uv != lemon::INVALID )//   && degSet1[u] == degSet2[v])
+      if (uv != lemon::INVALID )//   && degSet1[u] == degSet2[v])
       {
-        node_created++;
 //        assert(deg1[u] == deg2[v]);
-        // don't add product nodes for a pair of deg-1 nodes unless _shell == 0
-        if (_shell == 0 || deg1[u] > 1)
-        {
-          Node uv = _g.addNode();
-          _mol1ToG[u] = uv;
-          _mol2ToG[v] = uv;
-          _gToMol1[uv] = u;
-          _gToMol2[uv] = v;
-          ++_numNodes;
-        }
+        Node uv = _g.addNode();
+        _prot1ToG[u] = uv;
+        _prot2ToG[v] = uv;
+        _gToProt1[uv] = u;
+        _gToProt2[uv] = v;
+        ++_numNodes;
       }
     }
   }
@@ -428,15 +391,15 @@ inline void Product<GR,BGR>::generate()
   // generate c-edges ('red')
   for (NodeIt u1v1(_g); u1v1 != lemon::INVALID; ++u1v1)
   {
-    Node u1 = _gToMol1[u1v1];
-    Node v1 = _gToMol2[u1v1];
+    Node u1 = _gToProt1[u1v1];
+    Node v1 = _gToProt2[u1v1];
     for (NodeIt u2v2 = u1v1; u2v2 != lemon::INVALID; ++ u2v2)
     {
       if (u1v1 == u2v2)
         continue;
 
-      Node u2 = _gToMol1[u2v2];
-      Node v2 = _gToMol2[u2v2];
+      Node u2 = _gToProt1[u2v2];
+      Node v2 = _gToProt2[u2v2];
 
 
       if (u1 != u2 && v1 != v2)
@@ -447,7 +410,7 @@ inline void Product<GR,BGR>::generate()
 
         if (u1u2 && v1v2)
         {
-          _connectivityEdge[_g.addEdge(u1v1, u2v2)] = PRODUCT_RED_EDGE;
+          _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_RED_EDGE;
           ++_numEdges;
         }
       }
@@ -457,7 +420,6 @@ inline void Product<GR,BGR>::generate()
 
   IntNodeMap component_labels(_g);
   int n_components = lemon::connectedComponents(_g, component_labels);
-  // TODO: Destroy?
   _components = new NodeMatrix (n_components, std::vector<Node>(0));
 
 
@@ -473,8 +435,8 @@ inline void Product<GR,BGR>::generate()
     for (int j=0; j< size; j++)
     {
       Node u1v1 = (*_components)[i][j];
-      Node u1 = _gToMol1[u1v1];
-      Node v1 = _gToMol2[u1v1];
+      Node u1 = _gToProt1[u1v1];
+      Node v1 = _gToProt2[u1v1];
       for (int k=j+1; k< size;k++)
       {
         Node u2v2 = (*_components)[i][k];
@@ -482,8 +444,8 @@ inline void Product<GR,BGR>::generate()
         if (u1v1 == u2v2)
           continue;
 
-        Node u2 = _gToMol1[u2v2];
-        Node v2 = _gToMol2[u2v2];
+        Node u2 = _gToProt1[u2v2];
+        Node v2 = _gToProt2[u2v2];
 
 
         if (u1 != u2 && v1 != v2)
@@ -493,11 +455,11 @@ inline void Product<GR,BGR>::generate()
 
           if (!u1u2 && !v1v2)
           {
-            _connectivityEdge[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLACK_EDGE;
+            _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLACK_EDGE;
             ++_numEdges;
           } else if (!u1u2 || !v1v2)
           {
-            _connectivityEdge[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
+            _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
             ++_numEdges;
           }
         }
@@ -509,19 +471,18 @@ inline void Product<GR,BGR>::generate()
 }
 
 template<typename GR, typename BGR>
-inline void Product<GR,BGR>::generate(const MoleculeType& mol,
+inline void Product<GR,BGR>::generate(const ProteinType &prot,
                                            const IntNodeMap& deg,
-                                           IntSetNodeMap& intSet,
                                            IntSetNodeMap& degSet)
 {
-  const Graph& g = mol.getGraph();
+  const Graph& g = prot.getGraph();
   BoolNodeMap visited(g, false);
   for (NodeIt v(g); v != lemon::INVALID; ++v)
   {
     lemon::mapFill(g, visited, false);
-    IntSet& s = intSet[v];
     IntSet& ds = degSet[v];
-    dfs(deg, v, 0, mol, visited, s, ds);
+    visited[v] = true;
+    ds.insert(deg[v]);
   }
 }
 
@@ -548,10 +509,10 @@ inline void Product<GR,BGR>::printDOT(std::ostream& out) const
   // nodes
   for (NodeIt uv(_g); uv != lemon::INVALID; ++uv)
   {
-    Node u = _gToMol1[uv];
-    Node v = _gToMol2[uv];
-    out << "\t" << _g.id(uv) << " [label=\"[" << _mol1.getLabel2(u) << " -> "
-    << _mol2.getLabel2(v) << "]" << "\\n" << _g.id(uv) << "\"]" << std::endl;
+    Node u = _gToProt1[uv];
+    Node v = _gToProt2[uv];
+    out << "\t" << _g.id(uv) << " [label=\"[" << _prot1.getLabel(u) << " -> "
+    << _prot2.getLabel(v) << "]" << "\\n" << _g.id(uv) << "\"]" << std::endl;
   }
 
   // edges

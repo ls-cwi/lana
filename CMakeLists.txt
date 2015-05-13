@@ -45,7 +45,7 @@ set( Lana_Hdr
   src/input/edgelistparser.h
   src/input/matchinggraphshuffle.h
 
-  src/molecule.h
+  src/Protein.h
   src/bronkerbosch.h
   src/bronkerboschconnected.h
   src/bronkerboschconnectedrelaxed.h
