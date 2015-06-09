@@ -185,6 +185,7 @@ public:
 
     void addOutput(OutputFormatEnum fmt);
 
+    void checkDuplicates(NodeVectorVector vector);
 private:
     TEMPLATE_GRAPH_TYPEDEFS(Graph);
 
@@ -220,6 +221,7 @@ int Lana<GR, BGR>::solve() {
 
         std::cout << "Component loop #" << i << "(size: " << size << ")" << std::endl;
 
+
         _prod->enableComponent(i);
         std::cout << "Generating BKC." << std::endl;
         BronKerboschConnectedRelaxedType bk(*_prod, _options);
@@ -241,6 +243,7 @@ int Lana<GR, BGR>::solve() {
         _solutions.insert(_solutions.end(), x.begin(), x.end());
         _prod->disableComponent(i);
     }
+    checkDuplicates(_solutions);
     _prod->enableAllComponents();
 
     if (_options._printProductVector)
@@ -261,6 +264,19 @@ int Lana<GR, BGR>::solve() {
 
 
     return 0;
+}
+
+template<typename GR, typename BGR>
+void Lana<GR, BGR>::checkDuplicates(NodeVectorVector vec)
+{
+    std::cout << "Checking duplicates..." << std::endl;
+    unsigned long size = vec.size();
+    std::cout << "Old size: size: " << size << std::endl;
+    std::sort( vec.begin(), vec.end() );
+    vec.erase( std::unique( vec.begin(), vec.end() ), vec.end() );
+    unsigned long new_size = vec.size();
+    std::cout << "New size: size: " << new_size << std::endl;
+
 }
 
 template<typename GR, typename BGR>

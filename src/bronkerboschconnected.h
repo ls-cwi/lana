@@ -85,7 +85,7 @@ void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
   std::cout << "Done with generation of Degeneracy" << std::endl;
 
   BitSet mask(_n);
-  
+
   int i = 0;
   unsigned long size = order.size();
   for (typename NodeList::const_iterator it = order.begin(); it != order.end(); ++it)
@@ -143,16 +143,20 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
 //  assert((R & S).none());
 //  assert((X & S).none());
 
-  // let's print P, R and X
-  //std::cout << "P = ";
-  //print(P, std::cout);
-  //std::cout << "D = ";
-  //print(D, std::cout);
-  //std::cout << ", R = ";
-  //print(R, std::cout);
-  //std::cout << ", X = ";
-  //print(X, std::cout);
-  //std::cout << std::endl;
+  if (g_verbosity >= VERBOSE_DEBUG)
+  {
+    std::cerr << "P = ";
+    printBitSet(P, std::cerr);
+    std::cerr << ", D = ";
+    printBitSet(D, std::cerr);
+    std::cerr << ", R = ";
+    printBitSet(R, std::cerr);
+    std::cerr << ", X = ";
+    printBitSet(X, std::cerr);
+    std::cerr << ", S = ";
+    printBitSet(S, std::cerr);
+    std::cerr << std::endl;
+  }
 
   // Reports maximal c-cliques in P \cup R (but not in X and S)
   BitSet P_cup_X = P | X;
@@ -185,10 +189,31 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
     }
 
     assert(max_u != lemon::INVALID);
+
     BitSet P_diff_Nu = P - _bitNeighborhood[max_u];
+//    std::cout << "Pivot: " << _g.id(max_u) << std::endl;
+//    std::cout << "P diff NU: ";
+//    printBitSet(P_diff_Nu, std::cout);
+//    std::cout << std::endl;
+
+    BitSet b(_n);
+
     for (size_t i = 0; i < P.size(); ++i)
     {
       if (P_diff_Nu[i])
+      {
+        b.set(i);
+      }
+      else if (P[i] && (D & (_bitNeighborhood[_bitToNode[i]] - _bitNeighborhood[max_u])).count() > 0)
+      {
+        b.set(i);
+      }
+    }
+
+
+    for (size_t i = 0; i < P.size(); ++i)
+    {
+      if (b[i])
       {
         Node v = _bitToNode[i];
         const BitSet& N_v = _bitNeighborhood[v];

@@ -58,6 +58,7 @@ public:
           , _bitToNode()
           , _nodeToBit(prod.getGraph(), std::numeric_limits<size_t>::max())
           , _bitNeighborhood(prod.getGraph(), BitSet(_n))
+          , _prod(prod)
   {
     // initialize mappings
     _bitToNode.reserve(_n);
@@ -72,6 +73,7 @@ public:
     for (EdgeIt e(_g); e != lemon::INVALID; ++e)
     {
       if (prod.connectivityEdge(e) == ProductType::PRODUCT_BLACK_EDGE
+          || prod.connectivityEdge(e) == ProductType::PRODUCT_BLUE_EDGE
           || prod.connectivityEdge(e) == ProductType::PRODUCT_RED_EDGE)
       {
         Node u = _g.u(e);
@@ -97,6 +99,8 @@ protected:
   std::vector<Node> _bitToNode;
   BitNodeMap _nodeToBit;
   BitSetNodeMap _bitNeighborhood;
+
+  const ProductType& _prod;
 
   size_t computeDegeneracy(NodeList& order);
 
@@ -133,7 +137,10 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
     size_t d = 0;
     for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
     {
-      ++d;
+      if (true || _prod.connectivityEdge(e) != ProductType::PRODUCT_BLUE_EDGE)
+      {
+        ++d;
+      }
     };
     deg[v] = d;
     if (d > maxDeg) maxDeg = d;
@@ -170,14 +177,17 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
 
       for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
       {
-        Node w = _g.oppositeNode(v, e);
-        if (present[w])
+        if (true || _prod.connectivityEdge(e) != ProductType::PRODUCT_BLUE_EDGE)
         {
-          size_t deg_w = deg[w];
-          typename NodeList::iterator it_w = it[w];
+          Node w = _g.oppositeNode(v, e);
+          if (present[w])
+          {
+            size_t deg_w = deg[w];
+            typename NodeList::iterator it_w = it[w];
 
-          T[deg_w - 1].splice(T[deg_w - 1].begin(), T[deg_w], it_w);
-          deg[w]--;
+            T[deg_w - 1].splice(T[deg_w - 1].begin(), T[deg_w], it_w);
+            deg[w]--;
+          }
         }
       }
 

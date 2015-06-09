@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     ArgParser ap(argc, (char const *const *) argv);
     Options options;
 
-    std::string g1, g2, gm, outputFile;
+    std::string g1, g2, gm, outputFile, freq_file;
     int inputFormatG1 = static_cast<int>(LanaType::IN_STRING);
     int inputFormatG2 = static_cast<int>(LanaType::IN_STRING);
     int inputFormatGm = static_cast<int>(LanaType::BP_IN_BLAST);
@@ -102,7 +102,8 @@ int main(int argc, char** argv)
             .refOption("p", "Computer p-value using specified number of samples (default: 0)",
                        nSamples, false)
             .boolOption("a", "Do not remove automorphisms.")
-            .boolOption("sol", "Print a solution in Human-Readable format to STDOUT.");
+            .boolOption("sol", "Print a solution in Human-Readable format to STDOUT.")
+            .refOption("freq", "File name of the file to write clique size frequencies to.", freq_file, false);
 
     ap.parse();
 
@@ -154,7 +155,7 @@ int main(int argc, char** argv)
 
     // TODO: Add cli parameter for this?
     std::ofstream clique_file;
-    clique_file.open("/Users/jelmer/Desktop/test.csv");
+    clique_file.open(freq_file.c_str());
     lana.printCliqueSizeFrequencies(clique_file);
     clique_file.close();
 

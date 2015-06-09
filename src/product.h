@@ -231,18 +231,18 @@ public:
     out << "[" << _g.id(uv) << ": " << _prot1.getLabel(u) << " -> "
     << _prot2.getLabel(v) << "]";
 
-    const NodeVector& uNeighbors = _g1ToDeg1Neighbors[u];
-    const NodeVector& vNeighbors = _g2ToDeg1Neighbors[v];
+//    const NodeVector& uNeighbors = _g1ToDeg1Neighbors[u];
+//    const NodeVector& vNeighbors = _g2ToDeg1Neighbors[v];
 
 //    assert(uNeighbors.size() == vNeighbors.size());
-    for (size_t i = 0; i < uNeighbors.size(); ++i)
-    {
-      out << ", ";
-      out << "[" << _prot1.getLabel(uNeighbors[i])
-      << " (" << _prot1.getLabel(uNeighbors[i]) << ") , "
-      << _prot2.getLabel(vNeighbors[i])
-      << " (" << _prot2.getLabel(vNeighbors[i]) << ")]";
-    }
+//    for (size_t i = 0; i < uNeighbors.size(); ++i)
+//    {
+//      out << ", ";
+//      out << "[" << _prot1.getLabel(uNeighbors[i])
+//      << " (" << _prot1.getLabel(uNeighbors[i]) << ") , "
+//      << _prot2.getLabel(vNeighbors[i])
+//      << " (" << _prot2.getLabel(vNeighbors[i]) << ")]";
+//    }
   }
 
 
@@ -459,6 +459,7 @@ inline void Product<GR,BGR>::generate()
             ++_numEdges;
           } else if (!u1u2 || !v1v2)
           {
+
             _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
             ++_numEdges;
           }
@@ -466,7 +467,40 @@ inline void Product<GR,BGR>::generate()
       }
     }
   }
+
+  int component_sizes [n_components];
+  memset(component_sizes, 0, sizeof component_sizes);
+
+
+  int max_size = 0;
+  for (NodeIt k(_g); k != lemon::INVALID; ++k)
+  {
+    component_sizes[component_labels[k]] = component_sizes[component_labels[k]] + 1;
+    if (component_sizes[component_labels[k]] > max_size)
+    {
+      max_size = component_sizes[component_labels[k]];
+    }
+  }
+
+
+  int size_frequencies [max_size+1];
+  memset(size_frequencies, 0, sizeof size_frequencies);
+  for (int m=0; m<n_components; m++)
+  {
+    ++size_frequencies[component_sizes[m]];
+  }
+
+
+  std::ofstream freq_file;
+  freq_file.open("/Users/jelmer/Desktop/comp_freq.dot");
+
+  for (int n=0; n<=max_size; n++)
+  {
+    if (size_frequencies[n] > 0)
+      freq_file << n << ": " << size_frequencies[n] << std::endl;
+  }
   
+  freq_file.close();
 
 }
 
