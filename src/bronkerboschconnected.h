@@ -13,9 +13,14 @@
 #include "options.h"
 #include <boost/dynamic_bitset.hpp>
 #include <lemon/core.h>
+#include <signal.h>
+
+extern volatile int sig_caught;
 
 namespace nina {
 namespace gna {
+
+
 
 template<typename GR, typename BGR, typename PGR>
 class BronKerboschConnected : public nina::BronKerbosch<GR,BGR,PGR>
@@ -48,11 +53,15 @@ protected:
   using Parent::report;
   using Parent::printBitSet;
   using Parent::_options;
+  using Parent::_cliques;
 
 public:
   BronKerboschConnected(const ProductType& product, const Options& options)
     : Parent(product, options)
     , _restrictedBitNeighborhood(_g, BitSet(_n))
+    , _largestCliqueFound(0)
+    , _skipped(0)
+    , _not_skipped(0)
   {
     // initialize restricted neighborhood mapping
     for (EdgeIt e(_g); e != lemon::INVALID; ++e)
@@ -71,14 +80,24 @@ public:
 
 protected:
   BitSetNodeMap _restrictedBitNeighborhood;
+  int _largestCliqueFound;
+  int64_t _skipped;
+  int64_t _not_skipped;
+
 
 private:
   void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
+  void printHistogram(std::ofstream &freq_file);
+
 };
+
 
 template<typename GR, typename BGR, typename PGR>
 void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
 {
+
+
+
   NodeList order;
   std::cout << "Starting generation of Degeneracy" << std::endl;
   computeDegeneracy(order);
@@ -124,6 +143,8 @@ void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
     bkPivot(P, D, R, X, S);
     mask.set(_nodeToBit[v]);
   }
+  std::cerr << "Skipped: " << _skipped << std::endl;
+  std::cerr << "Not skipped: " << _not_skipped << std::endl;
 }
 
 template<typename GR, typename BGR, typename PGR>
@@ -131,6 +152,22 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
                                         BitSet R,
                                         BitSet X, BitSet S)
 {
+  if ((P | D | R ).count() < 0.9*_largestCliqueFound) {
+    _skipped++;
+   // return;
+  } else { _not_skipped++;}
+
+  if (sig_caught) {
+    sig_caught = 0;
+
+    std::ofstream hist_file;
+    hist_file.open(_options._hist_file_name->c_str());
+
+    printHistogram(hist_file);
+    hist_file.close();
+
+  }
+
   // all sets are pairwise disjoint
 //  assert((P & D).none());
 //  assert((P & R).none());
@@ -162,6 +199,11 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
   BitSet P_cup_X = P | X;
   if (P_cup_X.none())
   {
+    int size = R.count();
+    if (size > _largestCliqueFound) {
+      std::cout << "Largest found clique is now " << size << "(was " << _largestCliqueFound << ")" << std::endl;
+      _largestCliqueFound = size;
+    }
     report(R);
   }
   //else if (P.none())
@@ -250,6 +292,38 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
    * - Each node v in X is adjacent to all nodes in R
    *   (maximal c-cliques containing R \cup v have already been reported)
    */
+}
+
+template<typename GR, typename BGR, typename PGR>
+void BronKerboschConnected<GR, BGR, PGR>::printHistogram(std::ofstream &out)
+{
+  int n_solutions = _cliques.size();
+  int solution_sizes[n_solutions];
+  int max_size = 0;
+
+  for (int i = 0; i < n_solutions; i++)
+  {
+    solution_sizes[i] = _cliques[i].size();
+    if (solution_sizes[i] > max_size)
+    {
+      max_size = solution_sizes[i];
+    }
+  }
+
+  int size_frequencies[max_size + 1];
+  memset(size_frequencies, 0, sizeof size_frequencies);
+
+  for (int j = 0; j < n_solutions; j++)
+  {
+    size_frequencies[solution_sizes[j]] = size_frequencies[solution_sizes[j]] + 1;
+  }
+
+  for (int k = 0; k <= max_size; k++)
+  {
+    if (size_frequencies[k] > 0)
+        out << k << ", " << size_frequencies[k] << std::endl;
+  }
+  out.close();
 }
 
 

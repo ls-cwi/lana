@@ -9,6 +9,7 @@
 #include <lemon/arg_parser.h>
 #include "verbose.h"
 #include "output/output.h"
+#include "bronkerboschconnected.h"
 
 using namespace lemon;
 using namespace nina;
@@ -22,14 +23,27 @@ typedef Parser<Graph> ParserType;
 typedef BpParser<Graph, BpGraph> BpParserType;
 typedef Output<Graph, BpGraph> OutputType;
 
+volatile int sig_caught = 0;
+
+
+
+void handle_sigusr1(int signum) {
+    if (signum == SIGUSR1) {
+        sig_caught = 1;
+    }
+}
+
 int main(int argc, char** argv)
 {
+    signal(SIGUSR1, handle_sigusr1);
+
+
     // TODO: Update readme instructions for OSX.
 
     ArgParser ap(argc, (char const *const *) argv);
     Options options;
 
-    std::string g1, g2, gm, outputFile, freq_file;
+    std::string g1, g2, gm, outputFile, freq_file, hist_file_name;
     int inputFormatG1 = static_cast<int>(LanaType::IN_STRING);
     int inputFormatG2 = static_cast<int>(LanaType::IN_STRING);
     int inputFormatGm = static_cast<int>(LanaType::BP_IN_BLAST);
@@ -47,6 +61,7 @@ int main(int argc, char** argv)
                     "     2 - More verbose output (default)\n"
                     "     3 - Debug output", verbosityLevel, false)
             .synonym("-verbosity", "v")
+            .refOption("hist", "File name for the histogram output.", hist_file_name, false)
             .refOption("g1", "File name of input graph G_1", g1, false)
             .refOption("g2", "File name of input graph G_2", g2, false)
             .refOption("gm", "File name in which matching edges of G_m are defined;\n"
@@ -112,6 +127,7 @@ int main(int argc, char** argv)
 
     options._removeAutomorphisms = !ap.given("a");
     options._printProductVector = ap.given("sol");
+    options._hist_file_name = &hist_file_name;
 
     if (ap.given("version"))
     {

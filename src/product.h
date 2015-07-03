@@ -460,8 +460,8 @@ inline void Product<GR,BGR>::generate()
           } else if (!u1u2 || !v1v2)
           {
 
-            _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
-            ++_numEdges;
+//            _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
+//            ++_numEdges;
           }
         }
       }

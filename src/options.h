@@ -14,6 +14,8 @@ struct Options
     int _nMaxBlueEdges;
     bool _printProductVector;
     bool _removeAutomorphisms;
+    std::string* _hist_file_name;
+
 
     Options()
             :_minCliqueSize(0)
@@ -21,6 +23,7 @@ struct Options
             , _nMaxBlueEdges(0)
             , _printProductVector(false)
             , _removeAutomorphisms(true)
+            , _hist_file_name()
     {
     }
 };
