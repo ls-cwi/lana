@@ -502,6 +502,9 @@ inline void Product<GR,BGR>::generate()
   
   freq_file.close();
 
+
+
+
 }
 
 template<typename GR, typename BGR>

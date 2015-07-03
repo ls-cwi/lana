@@ -54,6 +54,7 @@ public:
   BronKerboschConnectedRelaxed(const ProductType& product, const Options& options)
     : Parent(product, options)
     , _blueBitNeighborhood(_g, BitSet(_n))
+    , _largestCliqueFound(0)
 
   {
     // initialize restricted neighborhood mapping
@@ -73,6 +74,7 @@ public:
 
 protected:
   BitSetNodeMap _blueBitNeighborhood;
+  int _largestCliqueFound;
 
 private:
   void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S, unsigned long blueEdgesTaken);
@@ -160,6 +162,9 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
                                         BitSet R,
                                         BitSet X, BitSet S, unsigned long blueEdgesTaken)
 {
+  if ((P | D | R ).count() < 0.9*_largestCliqueFound) {
+    return;
+  }
 
   if (blueEdgesTaken > _options._nMaxBlueEdges)
   {
@@ -200,6 +205,11 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
   BitSet P_cup_X = P | X;
   if (P_cup_X.none())
   {
+    int size = R.count();
+    if (size > _largestCliqueFound) {
+      std::cout << "Largest found clique is now " << size << "(was " << _largestCliqueFound << ")" << std::endl;
+      _largestCliqueFound = size;
+    }
     report(R);
   }
   //else if (P.none())

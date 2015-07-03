@@ -35,6 +35,7 @@ int main(int argc, char** argv)
     int inputFormatGm = static_cast<int>(LanaType::BP_IN_BLAST);
     int verbosityLevel = static_cast<int>(VERBOSE_NON_ESSENTIAL);
     int outputType = static_cast<int>(OutputType::ORIG_EDGES);
+    double eValCutOff = 10.;
     int nSamples = 0;
     std::string outputFormat = "3";
 
@@ -92,7 +93,9 @@ int main(int argc, char** argv)
                     "         in the solution (default)\n"
                     "     2 - Nodes and matching edges present in the solution\n"
                     "         as well as all original edges", outputType, false)
-
+            .refOption("e", "Specifies e value cutoff (only used in conjunction\n"
+                                        "     with -ifm 1 and -ifm 2, default: 10)",
+                                                eValCutOff, false)
             .refOption("mcs", "Minimum clique size. Smaller cliques are not processed. (default: 0)",
                        options._minCliqueSize, false)
             .refOption("mbe", "Maximum blue edges. The higher this number, the more\n"
@@ -141,7 +144,8 @@ int main(int argc, char** argv)
             LanaType::createBpParser(gm,
                                         static_cast<LanaType::BpInputFormatEnum>(inputFormatGm),
                                         pParserG1,
-                                        pParserG2);
+                                        pParserG2,
+                                        eValCutOff);
 
     if (!lana.init(pParserG1, pParserG2, pParserGm))
         return 1;

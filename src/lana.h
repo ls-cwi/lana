@@ -168,7 +168,8 @@ public:
     static BpParserType* createBpParser(const std::string& filename,
                                         BpInputFormatEnum fmt,
                                         ParserType* pParserG1,
-                                        ParserType* pParserG2);
+                                        ParserType* pParserG2,
+                                        double evalCutOff);
 
     virtual int solve();
 
@@ -368,7 +369,8 @@ inline typename Lana<GR, BGR>::BpParserType*
 Lana<GR, BGR>::createBpParser(const std::string& filename,
                                  BpInputFormatEnum fmt,
                                  ParserType* pParserG1,
-                                 ParserType* pParserG2)
+                                 ParserType* pParserG2,
+                                 double evalCutOff)
 {
     BpParserType* pBpParser = NULL;
     switch (fmt)
@@ -378,7 +380,7 @@ Lana<GR, BGR>::createBpParser(const std::string& filename,
             break;
         case BP_IN_BLAST:
             // TODO: Correct threshold?
-            pBpParser = new BpParserBlastType(filename, pParserG1, pParserG2, 0);
+            pBpParser = new BpParserBlastType(filename, pParserG1, pParserG2, evalCutOff);
             break;
         case BP_IN_LGF:
             pBpParser = new BpParserLgfType(filename, pParserG1, pParserG2);
