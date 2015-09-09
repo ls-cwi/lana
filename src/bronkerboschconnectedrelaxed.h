@@ -29,8 +29,8 @@ public:
   typedef PGR ProductGraphType;
   /// Base class type
   typedef nina::gna::BronKerboschConnected<GR,BGR,PGR> Parent;
-  /// Product graph type
-  typedef Product<ProductGraphType , BpGraph> ProductType;
+  /// ProductGraph graph type
+  typedef ProductGraph<ProductGraphType , BpGraph> ProductType;
   /// Solver type
   typedef typename Parent::SolverType SolverType;
 
@@ -49,6 +49,7 @@ protected:
   using Parent::printBitSet;
   using Parent::_options;
   using Parent::_restrictedBitNeighborhood;
+  using Parent::printHistogram;
 
 public:
   BronKerboschConnectedRelaxed(const ProductType& product, const Options& options)
@@ -88,9 +89,17 @@ template<typename GR, typename BGR, typename PGR>
 void BronKerboschConnectedRelaxed<GR,BGR,PGR>::run(SolverType)
 {
   NodeList order;
-  std::cout << "Starting generation of Degeneracy" << std::endl;
+  if (g_verbosity >= VERBOSE_DEBUG)
+  {
+    std::cout << "Starting generation of Degeneracy" << std::endl;
+  }
+
   computeDegeneracy(order);
-  std::cout << "Done with generation of Degeneracy" << std::endl;
+
+  if (g_verbosity >= VERBOSE_DEBUG)
+  {
+    std::cout << "Done with generation of Degeneracy" << std::endl;
+  }
 
   BitSet mask(_n);
 
@@ -98,7 +107,10 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::run(SolverType)
   unsigned long size = order.size();
   for (typename NodeList::const_iterator it = order.begin(); it != order.end(); ++it)
   {
-    std::cout << "Checked start node " << i << "/" << size << "(" << 100.*i/size <<  "%)" << std::endl;
+    if (g_verbosity >= VERBOSE_DEBUG)
+    {
+      std::cout << "Checked start node " << i << "/" << size << " (" << 100. * i / size << "%)" << std::endl;
+    }
     i++;
     Node v = *it;
     const BitSet& N_v = _bitNeighborhood[v];
@@ -113,13 +125,13 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::run(SolverType)
     BitSet R(_n);
     R.set(_nodeToBit[v]);
     BitSet P = Nc_v & ~mask;
-    filterSAdmissible(P, R, _options._nMaxBlueEdges);
+    filterSAdmissible(P, R, _options._nMaxSEdges);
     BitSet D = (Nds_v ) & ~mask;
-    filterSAdmissible(D, R, _options._nMaxBlueEdges);
+    filterSAdmissible(D, R, _options._nMaxSEdges);
     BitSet X = Nc_v & mask;
-    filterSAdmissible(X, R, _options._nMaxBlueEdges);
+    filterSAdmissible(X, R, _options._nMaxSEdges);
     BitSet S = (Nds_v ) & mask;
-    filterSAdmissible(S, R, _options._nMaxBlueEdges);
+    filterSAdmissible(S, R, _options._nMaxSEdges);
 
     if (g_verbosity >= VERBOSE_DEBUG)
     {
@@ -162,11 +174,25 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
                                         BitSet R,
                                         BitSet X, BitSet S, unsigned long blueEdgesTaken)
 {
+  if (sig_caught) {
+    sig_caught = 0;
+
+    if (!_options._hist_file_name->empty())
+    {
+      std::ofstream hist_file;
+      hist_file.open(_options._hist_file_name->c_str());
+
+      printHistogram(hist_file);
+      hist_file.close();
+    }
+
+  }
+
   if ((P | D | R ).count() < 0.9*_largestCliqueFound) {
     return;
   }
 
-  if (blueEdgesTaken > _options._nMaxBlueEdges)
+  if (blueEdgesTaken > _options._nMaxSEdges)
   {
 //    std::cout << "too many blue, returning: ";
   }
@@ -195,7 +221,7 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
 //  printBitSet(X, std::cout);
 //  std::cout << std::endl;
 
-  if (blueEdgesTaken > _options._nMaxBlueEdges)
+  if (blueEdgesTaken > _options._nMaxSEdges)
   {
     // TODO: Merge back with statement above.
     return;
@@ -207,9 +233,16 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
   {
     int size = R.count();
     if (size > _largestCliqueFound) {
-      std::cout << "Largest found clique is now " << size << "(was " << _largestCliqueFound << ")" << std::endl;
+      if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+      {
+        std::cout << "Largest found clique in this component is now " << size << " (was " << _largestCliqueFound <<
+        ")" << std::endl;
+      }
       _largestCliqueFound = size;
     }
+
+
+
     report(R);
   }
   //else if (P.none())
@@ -269,7 +302,7 @@ void BronKerboschConnectedRelaxed<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
 
         unsigned long count = (R & Ns_v).count();
         unsigned long blueEdgesTaken_ = blueEdgesTaken + count;
-        int sEdgesRemaining = _options._nMaxBlueEdges - blueEdgesTaken_;
+        int sEdgesRemaining = _options._nMaxSEdges - blueEdgesTaken_;
         BitSet R_ = R;
         R_[_nodeToBit[v]] = 1;
 

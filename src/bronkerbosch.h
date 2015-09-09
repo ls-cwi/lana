@@ -29,8 +29,8 @@ public:
   typedef BGR BpGraph;
   /// The graph type of the first parameter type of the ProductGraph.
   typedef PGR ProductGraphType;
-  /// Product graph type
-  typedef nina::gna::Product<ProductGraphType , BpGraph> ProductType;
+  /// ProductGraph graph type
+  typedef nina::gna::ProductGraph<ProductGraphType , BpGraph> ProductType;
 
 
   typedef enum
@@ -131,9 +131,6 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
 
   BoolNodeMap present(_g, true);
   DegNodeMap deg(_g, 0);
-  DegNodeMap deg_c(_g, 0);
-  DegNodeMap deg_d(_g, 0);
-  DegNodeMap deg_s(_g, 0);
   size_t maxDeg = 0;
   NodeListItMap it(_g);
 
@@ -141,80 +138,17 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
   for (NodeIt v(_g); v != lemon::INVALID; ++v)
   {
     size_t d = 0;
-    size_t d_c = 0;
-    size_t d_d = 0;
-    size_t d_s = 0;
     for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
     {
+      // TODO: Remove or parametrize.
       if (true || _prod.connectivityEdge(e) != ProductType::PRODUCT_BLUE_EDGE)
       {
         ++d;
       }
-      if (_prod.connectivityEdge(e) == ProductType::PRODUCT_BLUE_EDGE) {d_s++;}
-      if (_prod.connectivityEdge(e) == ProductType::PRODUCT_RED_EDGE) {d_c++;}
-      if (_prod.connectivityEdge(e) == ProductType::PRODUCT_BLACK_EDGE) {d_d++;}
     };
     deg[v] = d;
-    deg_c[v] = d_c;
-    deg_d[v] = d_d;
-    deg_s[v] = d_s;
     if (d > maxDeg) maxDeg = d;
   }
-
-  if (maxDeg > 100)
-  {
-    int degree_frequencies[maxDeg + 1];
-    memset(degree_frequencies, 0, sizeof degree_frequencies);
-
-    int degree_frequencies_c[maxDeg + 1];
-    memset(degree_frequencies_c, 0, sizeof degree_frequencies_c);
-
-    int degree_frequencies_d[maxDeg + 1];
-    memset(degree_frequencies_d, 0, sizeof degree_frequencies_d);
-
-    int degree_frequencies_s[maxDeg + 1];
-    memset(degree_frequencies_s, 0, sizeof degree_frequencies_s);
-
-    for (NodeIt v(_g); v != lemon::INVALID; ++v)
-    {
-      ++degree_frequencies[deg[v]];
-      ++degree_frequencies_c[deg_c[v]];
-      ++degree_frequencies_d[deg_d[v]];
-      ++degree_frequencies_s[deg_s[v]];
-    }
-
-    std::ofstream degree_file;
-    degree_file.open("/Users/jelmer/Desktop/degrees.csv");
-
-    std::ofstream degree_file_c;
-    degree_file_c.open("/Users/jelmer/Desktop/degrees_c.csv");
-
-    std::ofstream degree_file_d;
-    degree_file_d.open("/Users/jelmer/Desktop/degrees_d.csv");
-
-    std::ofstream degree_file_s;
-    degree_file_s.open("/Users/jelmer/Desktop/degrees_s.csv");
-
-    for (int n = 0; n <= maxDeg; n++)
-    {
-      if (degree_frequencies[n] > 0)
-        degree_file << n << ", " << degree_frequencies[n] << std::endl;
-
-      if (degree_frequencies_c[n] > 0)
-        degree_file_c << n << ", " << degree_frequencies_c[n] << std::endl;
-
-      if (degree_frequencies_d[n] > 0)
-        degree_file_d << n << ", " << degree_frequencies_d[n] << std::endl;
-
-      if (degree_frequencies_s[n] > 0)
-        degree_file_s << n << ", " << degree_frequencies_s[n] << std::endl;
-    }
-    degree_file.close();
-    degree_file_c.close();
-    degree_file_d.close();
-    degree_file_s.close();
-    std::cerr << "PRINTED" << std::endl;
-  } else { std::cerr << "NOT LARGE ENOUGH" << std::endl;}
 
 
 
@@ -250,6 +184,7 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
 
       for (IncEdgeIt e(_g, v); e != lemon::INVALID; ++e)
       {
+        // TODO: Remove one
         if (true || _prod.connectivityEdge(e) != ProductType::PRODUCT_BLUE_EDGE)
         {
           Node w = _g.oppositeNode(v, e);
@@ -272,7 +207,10 @@ size_t BronKerbosch<GR,BGR,PGR>::computeDegeneracy(NodeList& order)
     }
   }
 
-  //std::cerr << "Degeneracy: " << degeneracy << std::endl;
+  if (g_verbosity >= VERBOSE_DEBUG)
+  {
+    std::cerr << "Degeneracy: " << degeneracy << std::endl;
+  }
   return degeneracy;
 }
 
@@ -312,6 +250,8 @@ void BronKerbosch<GR,BGR,PGR>::report(const BitSet& R)
   {
     if (R[i])
     {
+
+
       if (g_verbosity >= VERBOSE_DEBUG)
       {
         std::cerr << " " << _g.id(_bitToNode[i]);

@@ -15,6 +15,7 @@
 #include <lemon/core.h>
 #include <signal.h>
 
+// Defined in lana.cpp. See this file for an explanation.
 extern volatile int sig_caught;
 
 namespace nina {
@@ -34,8 +35,8 @@ public:
   typedef PGR ProductGraphType;
   /// Base class type
   typedef nina::BronKerbosch<GR,BGR,PGR> Parent;
-  /// Product graph type
-  typedef Product<ProductGraphType , BpGraph> ProductType;
+  /// ProductGraph graph type
+  typedef ProductGraph<ProductGraphType , BpGraph> ProductType;
   /// Solver type
   typedef typename Parent::SolverType SolverType;
 
@@ -60,8 +61,6 @@ public:
     : Parent(product, options)
     , _restrictedBitNeighborhood(_g, BitSet(_n))
     , _largestCliqueFound(0)
-    , _skipped(0)
-    , _not_skipped(0)
   {
     // initialize restricted neighborhood mapping
     for (EdgeIt e(_g); e != lemon::INVALID; ++e)
@@ -76,18 +75,18 @@ public:
     }
   }
 
+  virtual ~BronKerboschConnected() {}
+
   virtual void run(SolverType type);
 
 protected:
   BitSetNodeMap _restrictedBitNeighborhood;
   int _largestCliqueFound;
-  int64_t _skipped;
-  int64_t _not_skipped;
+  void printHistogram(std::ofstream &freq_file);
 
 
 private:
   void bkPivot(BitSet P, BitSet D, BitSet R, BitSet X, BitSet S);
-  void printHistogram(std::ofstream &freq_file);
 
 };
 
@@ -99,9 +98,16 @@ void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
 
 
   NodeList order;
-  std::cout << "Starting generation of Degeneracy" << std::endl;
+  if (g_verbosity >= VERBOSE_DEBUG)
+  {
+    std::cout << "Starting generation of Degeneracy" << std::endl;
+  }
   computeDegeneracy(order);
-  std::cout << "Done with generation of Degeneracy" << std::endl;
+
+  if (g_verbosity >= VERBOSE_DEBUG)
+  {
+    std::cout << "Done with generation of Degeneracy" << std::endl;
+  }
 
   BitSet mask(_n);
 
@@ -109,7 +115,10 @@ void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
   unsigned long size = order.size();
   for (typename NodeList::const_iterator it = order.begin(); it != order.end(); ++it)
   {
-    std::cout << "Checked start node " << i << "/" << size << "(" << 100.*i/size <<  "%)" << std::endl;
+    if (g_verbosity >= VERBOSE_DEBUG)
+    {
+      std::cout << "Checked start node " << i << "/" << size << " (" << 100. * i / size << "%)" << std::endl;
+    }
     i++;
     Node v = *it;
     const BitSet& N_v = _bitNeighborhood[v];
@@ -143,8 +152,6 @@ void BronKerboschConnected<GR,BGR,PGR>::run(SolverType)
     bkPivot(P, D, R, X, S);
     mask.set(_nodeToBit[v]);
   }
-  std::cerr << "Skipped: " << _skipped << std::endl;
-  std::cerr << "Not skipped: " << _not_skipped << std::endl;
 }
 
 template<typename GR, typename BGR, typename PGR>
@@ -152,11 +159,6 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
                                         BitSet R,
                                         BitSet X, BitSet S)
 {
-  if ((P | D | R ).count() < 0.9*_largestCliqueFound) {
-    _skipped++;
-   // return;
-  } else { _not_skipped++;}
-
   if (sig_caught) {
     sig_caught = 0;
 
@@ -201,9 +203,32 @@ void BronKerboschConnected<GR,BGR,PGR>::bkPivot(BitSet P, BitSet D,
   {
     int size = R.count();
     if (size > _largestCliqueFound) {
-      std::cout << "Largest found clique is now " << size << "(was " << _largestCliqueFound << ")" << std::endl;
+      if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+      {
+        std::cout << "Largest found clique in this component is now " << size << " (was " << _largestCliqueFound <<
+        ")" << std::endl;
+      }
       _largestCliqueFound = size;
     }
+
+    for (size_t i = 0; i < R.size(); ++i)
+    {
+      if (R[i])
+      {
+
+        for (size_t j = i+1; j < R.size(); ++j)
+        {
+          if (R[j])
+          {
+            if (!_bitNeighborhood[_bitToNode[i]][j]){
+              std::cerr << "NOT A CLIQUE!!!!!!!!!!!" << std::endl;
+
+            }
+          }
+        }
+      }
+    }
+
     report(R);
   }
   //else if (P.none())

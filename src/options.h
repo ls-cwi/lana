@@ -11,19 +11,23 @@ struct Options
 {
     int _minCliqueSize;
     int _nMaxCliques;
-    int _nMaxBlueEdges;
+    int _nMaxSEdges;
     bool _printProductVector;
     bool _removeAutomorphisms;
     std::string* _hist_file_name;
+    std::string* _comp_hist_file_name;
+    std::string* _prod_file_name;
 
 
     Options()
             :_minCliqueSize(0)
             , _nMaxCliques(0)
-            , _nMaxBlueEdges(0)
+            , _nMaxSEdges(0)
             , _printProductVector(false)
             , _removeAutomorphisms(true)
             , _hist_file_name()
+            , _comp_hist_file_name()
+            , _prod_file_name()
     {
     }
 };

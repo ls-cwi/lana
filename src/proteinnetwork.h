@@ -9,7 +9,7 @@
 
 // TODO: Try to remove this class entirely.
 template <typename GR>
-class Protein
+class ProteinNetwork
 {
 public:
     typedef GR Graph;
@@ -24,7 +24,7 @@ public:
     /// Labels of the nodes
     typedef typename Graph::template NodeMap<std::string> OrigLabelNodeMap;
 
-    Protein(const Graph& g, const OrigLabelNodeMap& labelMap)
+    ProteinNetwork(const Graph& g, const OrigLabelNodeMap& labelMap)
         : _g(g)
         , _labelMap(labelMap)
     {

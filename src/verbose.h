@@ -19,6 +19,7 @@ typedef enum {
 
 extern VerbosityLevel g_verbosity;
 
+
 } // namespace nina
 
 #endif /* VERBOSE_H_ */

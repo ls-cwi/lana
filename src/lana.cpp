@@ -23,9 +23,18 @@ typedef Parser<Graph> ParserType;
 typedef BpParser<Graph, BpGraph> BpParserType;
 typedef Output<Graph, BpGraph> OutputType;
 
+
+// SIGUSR1 can be used to indicate that the user wants to check the status of the algorithm.
+// When SIGUSR1 is received, the volatile variable sig_caught is set to 1.
+// In every invocation of bk_pivot in BronKerboschConnected and BronKerboschConnectedRelaxed
+// this variable is checked. If it is set to 1, the histogram of the sizes of the alignments
+// found in the current component are printed to the file specified by the '-hist' parameter.
+// Note that ONLY the alignments found in the current component are reported. Also note that
+// the reported alignements can still contain automorphisms.
+// To view the histogram of all alignments across all componenets, without automorphisms, one
+// must wait for entire algorithm to terminate.
+
 volatile int sig_caught = 0;
-
-
 
 void handle_sigusr1(int signum) {
     if (signum == SIGUSR1) {
@@ -43,7 +52,7 @@ int main(int argc, char** argv)
     ArgParser ap(argc, (char const *const *) argv);
     Options options;
 
-    std::string g1, g2, gm, outputFile, freq_file, hist_file_name;
+    std::string g1, g2, gm, outputFile, hist_file_name, prod_file_name, comp_hist_file_name;
     int inputFormatG1 = static_cast<int>(LanaType::IN_STRING);
     int inputFormatG2 = static_cast<int>(LanaType::IN_STRING);
     int inputFormatGm = static_cast<int>(LanaType::BP_IN_BLAST);
@@ -61,7 +70,9 @@ int main(int argc, char** argv)
                     "     2 - More verbose output (default)\n"
                     "     3 - Debug output", verbosityLevel, false)
             .synonym("-verbosity", "v")
-            .refOption("hist", "File name for the histogram output.", hist_file_name, false)
+            .refOption("hist", "File name for the histogram of alignment sizes.", hist_file_name, false)
+            .refOption("comp_hist", "File name for the histogram of connected-component sizes.", comp_hist_file_name, false)
+            .refOption("prod", "File name for the product graph DOT-file output.", prod_file_name, false)
             .refOption("g1", "File name of input graph G_1", g1, false)
             .refOption("g2", "File name of input graph G_2", g2, false)
             .refOption("gm", "File name in which matching edges of G_m are defined;\n"
@@ -113,21 +124,23 @@ int main(int argc, char** argv)
                                                 eValCutOff, false)
             .refOption("mcs", "Minimum clique size. Smaller cliques are not processed. (default: 0)",
                        options._minCliqueSize, false)
-            .refOption("mbe", "Maximum blue edges. The higher this number, the more\n"
-                    "blue edges can be used, and thus the more relaxation is applied.\n"
-                    "(default: 0)",
-                       options._nMaxBlueEdges, false)
+            .refOption("mse", "Maximum s-edges. The higher this number, the more\n"
+                    "     s-edges can be used, and thus the more relaxation is applied.\n"
+                    "     (default: 0)",
+                       options._nMaxSEdges, false)
             .refOption("p", "Computer p-value using specified number of samples (default: 0)",
                        nSamples, false)
             .boolOption("a", "Do not remove automorphisms.")
-            .boolOption("sol", "Print a solution in Human-Readable format to STDOUT.")
-            .refOption("freq", "File name of the file to write clique size frequencies to.", freq_file, false);
+            .boolOption("sol", "Print all found alignments in Human-Readable format to STDOUT.\n"
+                    "     Should probably only be used in combination with -mcs");
 
     ap.parse();
 
     options._removeAutomorphisms = !ap.given("a");
     options._printProductVector = ap.given("sol");
     options._hist_file_name = &hist_file_name;
+    options._comp_hist_file_name = &comp_hist_file_name;
+    options._prod_file_name = &prod_file_name;
 
     if (ap.given("version"))
     {
@@ -173,11 +186,16 @@ int main(int argc, char** argv)
 //        lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
     }
 
-    // TODO: Add cli parameter for this?
-    std::ofstream clique_file;
-    clique_file.open(freq_file.c_str());
-    lana.printCliqueSizeFrequencies(clique_file);
-    clique_file.close();
+
+    // Prints the frequencies of the sizes of the found alignments.
+    if (!hist_file_name.empty())
+    {
+        std::ofstream hist_file;
+        hist_file.open(hist_file_name.c_str());
+        lana.printCliqueSizeFrequencies(hist_file);
+        hist_file.close();
+    }
+
 
 
 

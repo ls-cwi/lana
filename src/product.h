@@ -21,13 +21,14 @@
 #include <lemon/maps.h>
 #include <lemon/smart_graph.h>
 #include <input/matchinggraph.h>
-#include "Protein.h"
+#include "proteinnetwork.h"
+#include "options.h"
 
 namespace nina {
 namespace gna {
 
 template<typename GR, typename BGR>
-class Product
+class ProductGraph
 {
 public:
   /// The graph type of the input graph
@@ -39,7 +40,7 @@ public:
 
   typedef typename BpGraph::Node BpNode;
   typedef typename BpGraph::Edge BpEdge;
-  typedef Protein<Graph> ProteinType;
+  typedef ProteinNetwork<Graph> ProteinType;
   typedef std::vector<typename Graph::Node> NodeVector;
   typedef typename NodeVector::const_iterator NodeVectorIt;
   typedef std::vector<NodeVector> NodeMatrix;
@@ -66,7 +67,10 @@ private:
   typedef typename Graph::template NodeMap<NodeVector> NodeVectorMap;
 
 public:
-  Product(const ProteinType &prot1, const ProteinType &prot2, const MatchingGraphType& matchingGraph)
+  ProductGraph(const ProteinType &prot1,
+               const ProteinType &prot2,
+               const MatchingGraphType& matchingGraph,
+               const Options& options)
     : _prot1(prot1)
     , _prot2(prot2)
     , _matchingGraph(matchingGraph)
@@ -82,11 +86,12 @@ public:
     , _g2ToDeg1Neighbors(prot2.getGraph())
     , _numNodes(0)
     , _numEdges(0)
+    , _options(options)
   {
     generate();
   }
 
-  ~Product()
+  ~ProductGraph()
   {
     delete _components;
   }
@@ -176,9 +181,9 @@ private:
   EdgeTypeEdgeMap _edgeType;
   NodeVectorMap _g1ToDeg1Neighbors;
   NodeVectorMap _g2ToDeg1Neighbors;
-
   int _numNodes;
   int _numEdges;
+  const Options& _options;
 
   void generate();
 
@@ -306,7 +311,7 @@ public:
 };
 
     template<typename GR, typename BGR>
-inline void Product<GR,BGR>::determineDegrees(const Graph& g, IntNodeMap& deg)
+inline void ProductGraph<GR,BGR>::determineDegrees(const Graph& g, IntNodeMap& deg)
 {
   for (NodeIt v(g); v != lemon::INVALID; ++v)
   {
@@ -318,7 +323,7 @@ inline void Product<GR,BGR>::determineDegrees(const Graph& g, IntNodeMap& deg)
 }
 
 template<typename GR, typename BGR>
-inline void Product<GR,BGR>::generateDeg1NeighborSet(const Graph& g,
+inline void ProductGraph<GR,BGR>::generateDeg1NeighborSet(const Graph& g,
                                                  const IntNodeMap& deg,
                                                  NodeVectorMap& deg1NeighborMap)
 {
@@ -338,7 +343,7 @@ inline void Product<GR,BGR>::generateDeg1NeighborSet(const Graph& g,
 }
 
 template<typename GR, typename BGR>
-inline void Product<GR,BGR>::generate()
+inline void ProductGraph<GR,BGR>::generate()
 {
 
   const Graph& g1 = _prot1.getGraph();
@@ -417,13 +422,13 @@ inline void Product<GR,BGR>::generate()
     }
   }
 
-
+  // Generate connected components
   IntNodeMap component_labels(_g);
   int n_components = lemon::connectedComponents(_g, component_labels);
   _components = new NodeMatrix (n_components, std::vector<Node>(0));
 
 
-
+  // Generate d-edges (black) and possibly s-edges (blue)
   for (NodeIt k(_g); k != lemon::INVALID; ++k)
   {
     (*_components)[component_labels[k]].push_back(k);
@@ -457,50 +462,57 @@ inline void Product<GR,BGR>::generate()
           {
             _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLACK_EDGE;
             ++_numEdges;
-          } else if (!u1u2 || !v1v2)
+          } else if ((!u1u2 || !v1v2) && _options._nMaxSEdges > 0)
           {
-
-//            _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
-//            ++_numEdges;
+            _edgeType[_g.addEdge(u1v1, u2v2)] = PRODUCT_BLUE_EDGE;
+            ++_numEdges;
           }
         }
       }
     }
   }
 
-  int component_sizes [n_components];
-  memset(component_sizes, 0, sizeof component_sizes);
-
-
-  int max_size = 0;
-  for (NodeIt k(_g); k != lemon::INVALID; ++k)
+  if(!_options._comp_hist_file_name->empty())
   {
-    component_sizes[component_labels[k]] = component_sizes[component_labels[k]] + 1;
-    if (component_sizes[component_labels[k]] > max_size)
+    // Calculate histogram of component sizes
+    int component_sizes[n_components];
+    memset(component_sizes, 0, sizeof component_sizes);
+
+
+    int max_size = 0;
+    for (NodeIt k(_g); k != lemon::INVALID; ++k)
     {
-      max_size = component_sizes[component_labels[k]];
+      component_sizes[component_labels[k]] = component_sizes[component_labels[k]] + 1;
+      if (component_sizes[component_labels[k]] > max_size)
+      {
+        max_size = component_sizes[component_labels[k]];
+      }
+    }
+
+
+    int size_frequencies[max_size + 1];
+    memset(size_frequencies, 0, sizeof size_frequencies);
+    for (int m = 0; m < n_components; m++)
+    {
+      ++size_frequencies[component_sizes[m]];
+    }
+
+
+    // Print the histogram of component sizes.
+    if (!_options._comp_hist_file_name->empty())
+    {
+      std::ofstream hist_file;
+      hist_file.open(_options._comp_hist_file_name->c_str());
+
+      for (int n = 0; n <= max_size; n++)
+      {
+        if (size_frequencies[n] > 0)
+          hist_file << n << ": " << size_frequencies[n] << std::endl;
+      }
+
+      hist_file.close();
     }
   }
-
-
-  int size_frequencies [max_size+1];
-  memset(size_frequencies, 0, sizeof size_frequencies);
-  for (int m=0; m<n_components; m++)
-  {
-    ++size_frequencies[component_sizes[m]];
-  }
-
-
-  std::ofstream freq_file;
-  freq_file.open("/Users/jelmer/Desktop/comp_freq.dot");
-
-  for (int n=0; n<=max_size; n++)
-  {
-    if (size_frequencies[n] > 0)
-      freq_file << n << ": " << size_frequencies[n] << std::endl;
-  }
-  
-  freq_file.close();
 
 
 
@@ -508,7 +520,7 @@ inline void Product<GR,BGR>::generate()
 }
 
 template<typename GR, typename BGR>
-inline void Product<GR,BGR>::generate(const ProteinType &prot,
+inline void ProductGraph<GR,BGR>::generate(const ProteinType &prot,
                                            const IntNodeMap& deg,
                                            IntSetNodeMap& degSet)
 {
@@ -524,7 +536,7 @@ inline void Product<GR,BGR>::generate(const ProteinType &prot,
 }
 
 template<typename GR, typename BGR>
-inline void Product<GR,BGR>::setComponentState(int index, bool state)
+inline void ProductGraph<GR,BGR>::setComponentState(int index, bool state)
 {
   NodeVector &component = (*_components)[index];
   unsigned long size = component.size();
@@ -536,7 +548,7 @@ inline void Product<GR,BGR>::setComponentState(int index, bool state)
 }
 
 template<typename GR, typename BGR>
-inline void Product<GR,BGR>::printDOT(std::ostream& out) const
+inline void ProductGraph<GR,BGR>::printDOT(std::ostream& out) const
 {
   // header
   out << "graph G {" << std::endl

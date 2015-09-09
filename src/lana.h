@@ -23,7 +23,7 @@
 #include "input/bpcandlistparser.h"
 #include "input/bplgfparser.h"
 #include "lna.h"
-#include "Protein.h"
+#include "proteinnetwork.h"
 #include "product.h"
 #include "bronkerboschconnected.h"
 #include "bronkerboschconnectedrelaxed.h"
@@ -59,7 +59,7 @@ public:
     /// Type of a matching map: maps a node to its matching edge
     typedef typename BpGraph::template NodeMap<BpEdge> BpMatchingMap;
 
-    typedef Product<Graph, BpGraph> ProductType;
+    typedef ProductGraph<Graph, BpGraph> ProductType;
     typedef std::vector<typename Graph::Node> NodeVector;
     typedef typename NodeVector::const_iterator NodeVectorIt;
     typedef std::vector<NodeVector> NodeVectorVector;
@@ -183,7 +183,6 @@ public:
 
     void printCliqueSizeFrequencies(std::ofstream &freq_file);
 
-
     void addOutput(OutputFormatEnum fmt);
 
     void checkDuplicates(NodeVectorVector vector);
@@ -197,70 +196,130 @@ private:
 template<typename GR, typename BGR>
 int Lana<GR, BGR>::solve() {
 
+    // Create two protein networks.
+    ProteinNetwork<Graph> n1(_pMatchingGraph->getG1(), _pMatchingGraph->getMapLabelG1());
+    ProteinNetwork<Graph> n2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
 
-    Protein<Graph> m1(_pMatchingGraph->getG1(), _pMatchingGraph->getMapLabelG1());
-    Protein<Graph> m2(_pMatchingGraph->getG2(), _pMatchingGraph->getMapLabelG2());
-
-    std::cout << "Creating ProductGraph" << std::endl;
-    _prod = new ProductType(m1, m2, *_pMatchingGraph);
-    std::cout << "Done creating ProductGraph" << std::endl;
-
-
-    if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+    if (g_verbosity >= VERBOSE_ESSENTIAL)
     {
-        std::cerr << "Product graph has " << _prod->getNumNodes()
-        << " nodes and " << _prod->getNumEdges()
-        << " edges" << std::endl;
+        std::cout << "Generating ProductGraph." << std::endl;
     }
 
+    // Create the product graph
+    _prod = new ProductType(n1, n2, *_pMatchingGraph, _options);
+
+    // Prints the product graph in DOT format.
+    if (!_options._prod_file_name->empty())
+    {
+        std::ofstream prod_file;
+        prod_file.open(_options._prod_file_name->c_str());
+        _prod->printDOT(prod_file);
+        prod_file.close();
+    }
+
+
+
     int numComponents = _prod->getNumComponents();
+
+    if (g_verbosity >= VERBOSE_ESSENTIAL)
+    {
+        std::cout << "ProductGraph graph has " << _prod->getNumNodes()
+        << " nodes, " << _prod->getNumEdges()
+        << " edges, and " << numComponents << " components." << std::endl;
+    }
+
+    // The product graph is split up into c-connected components.
+    // Here we iterate over these components.
     for (int i=0; i<numComponents; i++)
     {
         int size = _prod->getComponentSize(i);
+
+        if (i % 1000 == 0)
+        {
+            if (g_verbosity >= VERBOSE_ESSENTIAL)
+            {
+                std::cout << "Checking component " << i << "/" << numComponents << "." << std::endl;
+            }
+        }
+
+        // Skip small componenents.
+        // The vast majority of the componenets tend to be size 1, and are thus skipped.
         if (size <= std::max<int>(2, _options._minCliqueSize))
             continue;
 
-        std::cout << "Component loop #" << i << "(size: " << size << ")" << std::endl;
-
-
-        _prod->enableComponent(i);
-        std::cout << "Generating BKC." << std::endl;
-//        BronKerboschConnectedRelaxedType bk(*_prod, _options);
-        BronKerboschConnectedType bk(*_prod, _options);
-        std::cout << "Done generating BKC." << std::endl;
-        lemon::Timer t;
-
-        std::cout << "Running BK" << std::endl;
-        bk.run(BronKerboschType::BK_CLASSIC);
-        std::cout << "Done running BK" << std::endl;
-        if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+        if (i % 1000 != 0)
         {
-            std::cerr << "Time: " << t.realTime() << "s" << std::endl;
-            std::cerr << "#max-cliques: " << bk.getNumberOfMaxCliques() << std::endl;
+            if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+            {
+                std::cout << "Checking component " << i << "/" << numComponents << " (size: " << size << ")" <<
+                std::endl;
+            }
+
         }
 
-        // TODO: This makes a copy, a better way?
-        NodeVectorVector x = _options._removeAutomorphisms ? _prod->removeAutomorphisms(bk.getMaxCliques()) : bk.getMaxCliques();
+        _prod->enableComponent(i);
+
+        if (g_verbosity >= VERBOSE_DEBUG)
+        {
+            std::cout << "Generating BronKerbosch object." << std::endl;
+        }
+
+        // If the mse parameter (max s-edges) is set to 0, we use BronKerboschConnected
+        // instead of BronKerboschConnectedRelaxed because it's more efficient.
+        BronKerboschConnectedType* bk;
+        if (_options._nMaxSEdges > 0) {
+            bk = new BronKerboschConnectedRelaxedType(*_prod, _options);
+        }
+        else
+        {
+            bk = new BronKerboschConnectedType(*_prod, _options);
+        }
+
+
+        if (g_verbosity >= VERBOSE_DEBUG)
+        {
+            std::cout << "Done generating BronKerbosch object." << std::endl;
+            std::cout << "Running BronKerbosch algorithm." << std::endl;
+        }
+
+        lemon::Timer t;
+
+        bk->run(BronKerboschType::BK_CLASSIC);
+
+        if (g_verbosity >= VERBOSE_DEBUG)
+        {
+            std::cout << "Done running BronKerbosch algorithm." << std::endl;
+        }
+
+        if (g_verbosity >= VERBOSE_NON_ESSENTIAL)
+        {
+            std::cout << "Time: " << t.realTime() << "s" << std::endl;
+            std::cout << "Number of alignments found: " << bk->getNumberOfMaxCliques() << std::endl << std::endl;
+        }
+
+        NodeVectorVector x = _options._removeAutomorphisms ? _prod->removeAutomorphisms(bk->getMaxCliques()) : bk->getMaxCliques();
         _solutions.insert(_solutions.end(), x.begin(), x.end());
         _prod->disableComponent(i);
+
+        delete bk;
+
     }
     checkDuplicates(_solutions);
     _prod->enableAllComponents();
 
+    if (g_verbosity >= VERBOSE_ESSENTIAL)
+    {
+        std::cout << "Algorithm has succesfully terminated. " << _solutions.size() << " alignments were found." << std::endl;
+    }
+
+
+    // Prints found alignements to STDOUT in human readable format if the -sol flag is given.
     if (_options._printProductVector)
     {
-        std::cout << "# solutions found: " << _solutions.size() << std::endl;
         for (size_t i=0; i<_solutions.size(); ++i) {
             _prod->printProductNodeVector(_solutions.at(i), std::cout);
         }
     }
-
-    // TODO: Remove or add argument for this.
-    std::ofstream dot_file;
-    dot_file.open("/Users/jelmer/Desktop/dot.dot");
-    _prod->printDOT(dot_file);
-    dot_file.close();
-
 
 
 
@@ -270,13 +329,25 @@ int Lana<GR, BGR>::solve() {
 template<typename GR, typename BGR>
 void Lana<GR, BGR>::checkDuplicates(NodeVectorVector vec)
 {
-    std::cout << "Checking duplicates..." << std::endl;
+    if (g_verbosity >= VERBOSE_DEBUG)
+    {
+        std::cout << "Checking duplicates..." << std::endl;
+    }
     unsigned long size = vec.size();
-    std::cout << "Old size: size: " << size << std::endl;
     std::sort( vec.begin(), vec.end() );
     vec.erase( std::unique( vec.begin(), vec.end() ), vec.end() );
     unsigned long new_size = vec.size();
-    std::cout << "New size: size: " << new_size << std::endl;
+
+    if (new_size < size)
+    {
+        std::cerr << "Duplicates were detected (and removed). This should not occur!" << std::endl;
+    }
+
+    if (g_verbosity >= VERBOSE_DEBUG)
+    {
+        std::cout << "Old size: size: " << size << std::endl;
+        std::cout << "New size: size: " << new_size << std::endl;
+    }
 
 }
 
@@ -379,7 +450,6 @@ Lana<GR, BGR>::createBpParser(const std::string& filename,
             pBpParser = new BpParserCandListType(filename, pParserG1, pParserG2);
             break;
         case BP_IN_BLAST:
-            // TODO: Correct threshold?
             pBpParser = new BpParserBlastType(filename, pParserG1, pParserG2, evalCutOff);
             break;
         case BP_IN_LGF:
