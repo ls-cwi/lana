@@ -71,4 +71,4 @@ For complete run instructions, please run
 
 An example invocation:
 
-    ./lana -if1 0 -if2 0 -ifm 0 -g1 ../data/rno.gml -g2 ../data/hsa.gml -gm ../data/rno_hsa.seqSim
+    ./lana -if1 0 -if2 0 -ifm 0 -g1 ../data/mmu.gml -g2 ../data/cel.gml -gm ../data/mmu_cel.seqSim -o lana_mmu_cel.out

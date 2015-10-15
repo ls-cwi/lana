@@ -309,7 +309,7 @@ int Lana<GR, BGR>::solve() {
 
     if (g_verbosity >= VERBOSE_ESSENTIAL)
     {
-        std::cout << "Algorithm has succesfully terminated. " << _solutions.size() << " alignments were found." << std::endl;
+        std::cout << "Algorithm terminated successfully. " << _solutions.size() << " alignments were found." << std::endl;
     }
 
 
