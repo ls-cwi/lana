@@ -128,13 +128,13 @@ inline bool BpCandListParser<GR, BGR>::parse()
       typename ParserType::InvIdNodeMap::const_iterator invIt1 = pInvLabelG1->find(label_g1);
       if (invIt1 == pInvLabelG1->end())
       {
-        std::cerr << "Error: there is no node in G_1 labeled by "
-                  << label_g1 << std::endl;
-        return false;
+        std::cerr << "Warning: there is no node in G_1 labeled by "
+                  << label_g1 << ". Skipping" << std::endl;
+        //return false;
+        continue;
       }
 
-      const Node node1 = invIt1->second;
-      const BpRedNode r = _pGm->asRedNode((*_pG1ToGm)[node1]);
+
       while (lineStream.good())
       {
         lineStream >> label_g2;
@@ -142,31 +142,31 @@ inline bool BpCandListParser<GR, BGR>::parse()
         typename ParserType::InvIdNodeMap::const_iterator invIt2 = pInvLabelG2->find(label_g2);
         if (invIt2 == pInvLabelG2->end())
         {
-          std::cerr << "Error: there is no node in G_2 labeled by "
-                    << label_g2 << std::endl;
-          return false;
+          std::cerr << "Warning: there is no node in G_2 labeled by "
+                    << label_g2 << ". Skipping" << std::endl;
+          //return false;
+          continue;
         }
-        else
-        {
+          const Node node1 = invIt1->second;
+          const BpRedNode r = _pGm->asRedNode((*_pG1ToGm)[node1]);
           const Node node2 = invIt2->second;
           const BpBlueNode b = _pGm->asBlueNode((*_pG2ToGm)[node2]);
 
-          if (arcLookUp(r, b) != lemon::INVALID)
-          {
-            if (g_verbosity >= VERBOSE_DEBUG)
-              std::cout << "Warning: multiple edge ('"
-                        << label_g1 << "','" << label_g2
-                        << "') in '"  << _filename << "'. Skipped." << std::endl;
-          }
-          else
-          {
-            _pGm->addEdge(r, b);
-            _nEdges++;
-          }
+        if (arcLookUp(r, b) != lemon::INVALID)
+        {
+          if (g_verbosity >= VERBOSE_DEBUG)
+            std::cout << "Warning: multiple edge ('"
+                      << label_g1 << "','" << label_g2
+                      << "') in '"  << _filename << "'. Skipped." << std::endl;
         }
+        else
+        {
+          _pGm->addEdge(r, b);
+          _nEdges++;
+        }
+
       }
     }
-
   }
 
   if (_pWeightEdgeMap)
