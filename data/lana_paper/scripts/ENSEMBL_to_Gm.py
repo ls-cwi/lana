@@ -11,10 +11,13 @@ import os
 import glob
 from optparse import OptionParser
 import traceback
+from collections import OrderedDict
 
 parser = OptionParser()
 parser.add_option("-i", dest="ENSEMBL_file", help="ENSEMBL input", metavar="FILE")
 parser.add_option("-o", dest="cand_list_file", help="candidate list file", metavar="FILE")
+parser.add_option("--s1", dest="species_string_1", help="optional species ID for first protein in lists", type="string")
+parser.add_option("--s2", dest="species_string_2", help="optional species ID for remaining proteins in lists", type="string")
 
 (options, args) = parser.parse_args()
 
@@ -40,9 +43,12 @@ print "done."
 
 print "writing", options.cand_list_file, "...",
 for mp in O:
+    if options.species_string_1: o.write(options.species_string_1)
     o.write(mp)
+    O[mp] = list(OrderedDict.fromkeys(O[mp])) # make unique, gthere were some doubles in the list...
     for hp in O[mp]:
         o.write(' ')
+        if options.species_string_2: o.write(options.species_string_2)
         o.write(hp)
     o.write("\n")
 print "done."
