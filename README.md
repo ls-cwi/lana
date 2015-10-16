@@ -69,6 +69,6 @@ For complete run instructions, please run
 
 	 ./lana -h
 
-An example invocation:
+An example invocation (all exact matches of min size 6 between mouse and worm):
 
-    ./lana -if1 0 -if2 0 -ifm 0 -g1 ../data/mmu.gml -g2 ../data/cel.gml -gm ../data/mmu_cel.seqSim -o lana_mmu_cel.out
+    ./lana -if1 0 -if2 0 -ifm 0 -g1 ../data/mmu.gml -g2 ../data/cel.gml -gm ../data/mmu_cel.seqSim -mcs 6 -o lana_mmu_cel.out
