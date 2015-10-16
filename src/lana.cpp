@@ -181,9 +181,9 @@ int main(int argc, char** argv)
 
     if (lana.solve() == 0)
     {
-//        lana.parseOutputString(outputFormat);
+        lana.parseOutputString(outputFormat);
         // TODO: Test output formats other than .sif
-//        lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
+        lana.generateOutput(static_cast<OutputType::OutputType>(outputType), outputFile);
     }
 
 

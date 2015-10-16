@@ -25,6 +25,8 @@ the data form natalie 2.0: Identifiers: I guess these are ENSEMBL protein IDs. A
 
 I removed the species numbers (9606 for hsa and 10090 for mmu) in the networks to make them work with the ENSEMBL orthologs
 
+Also: note that the .gw versions are much smaller.  Reason is that natalie filters the STRING edges when reading in and only considers edges with combined score >= 900.  This has already been done for the .gw graphs
+
 
 
 
