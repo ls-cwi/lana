@@ -128,7 +128,7 @@ int main(int argc, char** argv)
                     "     s-edges can be used, and thus the more relaxation is applied.\n"
                     "     (default: 0)",
                        options._nMaxSEdges, false)
-            .refOption("p", "Computer p-value using specified number of samples (default: 0)",
+            .refOption("p", "Compute empirical p-value using specified number of samples (default: 0)",
                        nSamples, false)
             .boolOption("a", "Do not remove automorphisms.")
             .boolOption("sol", "Print all found alignments in Human-Readable format to STDOUT.\n"
