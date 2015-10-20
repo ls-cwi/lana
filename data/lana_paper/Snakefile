@@ -2,3 +2,5 @@ rule make_Gm:
     input: "original_data/20151013_ENSEMBL_mmu_hsa_orthologs.txt"
     output: "input/mmu_hsa_orthologs.txt"
     shell: "scripts/ENSEMBL_to_Gm.py -i {input} -o {output} --s1 10090. --s2 9606."
+
+#./scripts/ENSEMBL_to_Gm.py -i original_data/20151019_ENSEMBL_mmu_cel_orthologs.txt -o input/mmu_cel_orthologs.txt --s1 "10090." --s2 "6239."
